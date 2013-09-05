@@ -149,6 +149,11 @@ struct Clientlist {
 	Pertag *pertag;
 };
 
+typedef struct {
+	const char *name;
+	const int ltidxs[2];
+} TagPreset;
+
 /* function declarations */
 static void applyrules(Client *c);
 static Bool applysizehints(Client *c, int *x, int *y, int *w, int *h, Bool interact);
@@ -282,8 +287,9 @@ static Clientlist *cl;
 #include "config.h"
 
 struct Pertag {
-	unsigned int sellts[LENGTH(tags) + 1]; /* selected layouts */
+	char *names[LENGTH(tags) + 1];
 	Layout *ltidxs[LENGTH(tags) + 1][2]; /* matrix of tags and layouts indexes  */
+	unsigned int sellts[LENGTH(tags) + 1]; /* selected layouts */
 };
 
 /* compile-time check if all tags fit into an unsigned int bit array. */
@@ -473,7 +479,7 @@ buttonpress(XEvent *e) {
 	if(ev->window == selmon->barwin) {
 		i = x = 0;
 		do
-			x += TEXTW(tags[i]);
+			x += TEXTW(cl->pertag->names[i]);
 		while(ev->x >= x && ++i < LENGTH(tags));
 		if(i < LENGTH(tags)) {
 			click = ClkTagBar;
@@ -753,9 +759,9 @@ drawbar(Monitor *m) {
 	}
 	x = 0;
 	for(i = 0; i < LENGTH(tags); i++) {
-		w = TEXTW(tags[i]);
+		w = TEXTW(cl->pertag->names[i]);
 		drw_setscheme(drw, m->tagset[m->seltags] & 1 << i ? &scheme[SchemeSel] : &scheme[SchemeNorm]);
-		drw_text(drw, x, 0, w, bh, tags[i], urg & 1 << i);
+		drw_text(drw, x, 0, w, bh, cl->pertag->names[i], urg & 1 << i);
 		drw_rect(drw, x, 0, w, bh, m == selmon && selmon->sel && selmon->sel->tags & 1 << i,
 		           occ & 1 << i, urg & 1 << i);
 		x += w;
@@ -1553,12 +1559,14 @@ setup(void) {
 		die("fatal: could not malloc() %u bytes\n", sizeof(Clientlist));
 	if(!(cl->pertag = (Pertag *)calloc(1, sizeof(Pertag))))
 		die("fatal: could not malloc() %u bytes\n", sizeof(Pertag));
-	for(i=0; i <= LENGTH(tags); i++) {
+	for(i=0; i < LENGTH(tags); i++) {
 		/* init layouts */
 		XALLOC(cl->pertag->ltidxs[i][0], Layout, 1);
 		XALLOC(cl->pertag->ltidxs[i][1], Layout, 1);
-		memcpy(cl->pertag->ltidxs[i][0], &layouts[0], sizeof(Layout));
-		memcpy(cl->pertag->ltidxs[i][1], &layouts[1 % LENGTH(layouts)], sizeof(Layout));
+		memcpy(cl->pertag->ltidxs[i][0], &layouts[tags[i].ltidxs[0]], sizeof(Layout));
+		memcpy(cl->pertag->ltidxs[i][1], &layouts[tags[i].ltidxs[1]], sizeof(Layout));
+		XALLOC(cl->pertag->names[i], char, LENGTH(tags[i].name) + 1);
+		strncpy(cl->pertag->names[i], tags[i].name, LENGTH(tags[i].name));
 		cl->pertag->sellts[i] = 0;
 	}
 	/* init screen */
