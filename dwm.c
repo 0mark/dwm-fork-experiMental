@@ -42,6 +42,8 @@
 
 #include "drw.h"
 #include "util.h"
+#include "fancytext.h"
+#include "bitmaps.h"
 
 /* macros */
 #define BUTTONMASK              (ButtonPressMask|ButtonReleaseMask)

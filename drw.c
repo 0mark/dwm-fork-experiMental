@@ -140,9 +140,9 @@ drw_rect(Drw *drw, int x, int y, unsigned int w, unsigned int h, int filled, int
 }
 
 void
-drw_text(Drw *drw, int x, int y, unsigned int w, unsigned int h, const char *text, int invert) {
+drw_textn(Drw *drw, int x, int y, unsigned int w, unsigned int h, const char *text, int olen, int invert) {
 	char buf[256];
-	int i, tx, ty, th, len, olen;
+	int i, tx, ty, th, len;
 	Extnts tex;
 
 	if(!drw || !drw->scheme)
@@ -151,7 +151,6 @@ drw_text(Drw *drw, int x, int y, unsigned int w, unsigned int h, const char *tex
 	XFillRectangle(drw->dpy, drw->drawable, drw->gc, x, y, w, h);
 	if(!text || !drw->font)
 		return;
-	olen = strlen(text);
 	drw_font_getexts(drw->font, text, olen, &tex);
 	th = drw->font->ascent + drw->font->descent;
 	ty = y + (h / 2) - (th / 2) + drw->font->ascent;
@@ -169,6 +168,11 @@ drw_text(Drw *drw, int x, int y, unsigned int w, unsigned int h, const char *tex
 		XmbDrawString(drw->dpy, drw->drawable, drw->font->set, drw->gc, tx, ty, buf, len);
 	else
 		XDrawString(drw->dpy, drw->drawable, drw->gc, tx, ty, buf, len);
+}
+
+void
+drw_text(Drw *drw, int x, int y, unsigned int w, unsigned int h, const char *text, int invert) {
+	drw_textn(drw, x, y, w, h, text, strlen(text), invert);
 }
 
 void
