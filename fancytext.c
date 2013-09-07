@@ -52,7 +52,7 @@ void drw_bitmap_bargraph(Drw *drw, int x, int y, unsigned int w, unsigned int h,
 	}
 }
 
-void ft_set_color(Drw *drw, char *seq, unsigned int len) {
+/*void ft_set_color(Drw *drw, char *seq, unsigned int len) {
 	static Clr bg_last, fg_last;
 	char c;
 
@@ -135,10 +135,6 @@ void ft_add_bitmap_bargraph(Drw *drw, BitmapSet *bitmaps, int *x, int y, unsigne
 	}
 }
 
-int drw_fancytext_prepare(Drw *drw, BitmapSet *bitmaps, char *text, &) {
-
-}
-
 void drw_fancytext(Drw *drw, BitmapSet *bitmaps, int x, int y, unsigned int w, unsigned int h, char *text) {
 	char *ptr = text;
 	int len, fh = drw->font->ascent + drw->font->descent + 2;
@@ -207,77 +203,194 @@ void drw_fancytext(Drw *drw, BitmapSet *bitmaps, int x, int y, unsigned int w, u
 			
 		}
 	}
+}*/
+
+void ft_set_color(Drw *drw, int x, int y, unsigned int h, barItem *item) {
+	static Clr bg_last, fg_last;
+
+	if(item->data.c!=NULL) {
+		if(item->k=='b') {
+			memcpy(&bg_last, drw->scheme->bg, sizeof(Clr));
+			drw_clr_free(drw->scheme->bg);
+			drw->scheme->bg = item->data.c;
+		} else {
+			memcpy(&fg_last, drw->scheme->fg, sizeof(Clr));
+			drw_clr_free(drw->scheme->fg);
+			drw->scheme->fg = item->data.c;
+		}
+	} else {
+		if(item->k=='b')
+			memcpy(drw->scheme->bg, &bg_last, sizeof(Clr));
+		else
+			memcpy(drw->scheme->fg, &fg_last, sizeof(Clr));
+	}
 }
 
-void drw_prepare(Drw *drw, BitmapSet *bitmaps, unsigned int h, char *text, barItem *item) {
+void ft_add_bargraph(Drw *drw, int x, int y, unsigned int h, barItem *item) {
+	int num;
+
+	if(item->k=='h') {
+		drw_bargraph(drw, x + 1, y + h/4 + 1, h*2, h/2 - 2, True, num);
+	} else {
+		drw_bargraph(drw, x + 1, y + 1, h/3, h - 2, False, num);
+	}
+}
+
+void ft_add_bitmap(Drw *drw, BitmapSet *bitmaps, int *x, int y, unsigned int h, char *seq, unsigned int len) {
+	Bitmap *bm;
+	int idx;
+
+	if(len>1) {
+		idx = atoi(seq+1);
+		if(idx>=0 && idx<bitmaps->len) {
+			bm = bitmaps->items[idx];
+			drw_bitmap(drw, ALIGN(*x, y, bm->w + 2, h, bm->w, bm->h), bm);
+			*x += bm->w + 2;
+		} else {
+			printf("Image %d not found!", idx);
+		}
+	} else {
+		printf("Bad image sequence '%s'!", &seq[1]);
+	}
+
+}
+
+void ft_add_bitmap_bargraph(Drw *drw, BitmapSet *bitmaps, int *x, int y, unsigned int h, char *seq, unsigned int len) {
+	Bitmap *bm;
+	int idx, val, i;
+
+	for(i = 1; seq[i] && (seq[i]!=','); i++);
+	if(len>3 && i<len) {
+		seq[i] = '\0';
+		idx = atoi(seq + 1);
+		seq[i] = ',';
+		if(idx>=0 && idx<bitmaps->len) {
+			bm = bitmaps->items[idx];
+			val = atoi(seq + i + 1);
+			drw_bitmap_bargraph(drw, ALIGN(*x, y, bm->w + 2, h, bm->w, bm->h), *seq=='G', val, bm);
+			x += bm->w + 2;
+		} else {
+			printf("Image %d not found!", idx);
+		}
+	} else {
+		printf("Bad image sequence '%s'!", &seq[1]);
+	}
+}
+
+
+void drw_fancytext(Drw *drw, BitmapSet *bitmaps, int x, int y, unsigned int w, unsigned int h, barItem *item) {
+	Clr *bg, *fg;
+	barItem *tmp;
+
+	bg = drw->scheme->bg;
+	fg = drw->scheme->fg;
+	scheme->bg = calloc(sizeof(Clr));
+	memcpy(&scheme->bg, drw->scheme->bg, sizeof(Clr));
+	scheme->fg = calloc(sizeof(Clr));
+	memcpy(&scheme->fg, drw->scheme->fg, sizeof(Clr));
+
+	while(item->next) {
+		item->func(drw, x, y, h, item);
+		x += item->w;
+		tmp = item;
+		item = item->next;
+		free(tmp);
+	}
+
+	drw_clr_free(scheme->bg);
+	drw_clr_free(scheme->fg);
+}
+
+int drw_fancytext_prepare(Drw *drw, BitmapSet *bitmaps, char *text, barItem *item) {
 	char *ptr = text;
-	int len, fh = drw->font->ascent + drw->font->descent + 2;
-	unsigned int iw;
-	Bool first = True;
+	int len, fh = drw->font->ascent + drw->font->descent + 2, i, w = 0;
 
 	while(*ptr) {
-		// seek for begin of conrol sequence (^[)
-		// everything else is the current simple text string
-		for(len = 0; *ptr && (*ptr!='^' || ptr[1]!='['); len++, ptr++);
-
-		if(len) {
-			ptr[len] = '\0';
-			// output normal text
-			item->func = ft_drw_text;
-			item->w = TEXTNW(text, len);
-			//if(first) iw += ( drw->font->ascent + drw->font->descent ) / 2;
-			//drw_textn(drw, x, y, iw, h, text, len, False);
-			//x += iw;
-			//first = False;
-			item->data[0].s = text;
-		}
-
-		if(!*ptr) break;
-
 		if(*ptr=='^' && ptr[1]=='[') {
-			ptr += 2;
 			// seek for end of control sequence
+			ptr += 2;
 			for(len = 0; ptr[len] && (ptr[len]!=';'); len++);
+
 			if(len) {
+				item->k = *ptr;
 				ptr[len] = '\0';
 				switch(*ptr) {
 					// * background & foreground color
-					case 'b':
-					case 'f':
-						ft_set_color(drw, ptr, len);
+					case 'b': case 'f':
+						item->func = ft_set_color;
+						if(len>1) {
+							ptr[1] = '#';
+							item->data[0].c = drw_clr_create(drw);
+							ptr[1] = item->k;
+						}
 						break;
+
 					// * bargraph
-					case 'v':
-					case 'h':
-						ft_add_bargraph(drw, &x, y, fh, ptr, len);
+					case 'v': case 'h':
+						item->func = ft_add_bargraph;
+						w += item->w = *ptr=='v' ? fh*2 : fh/3;
+						if(len==2) {
+							item->data[0].i = atoi(ptr+1);
+						} else {
+							printf("Bad bargraph sequence '%s'!", &seq[1]);
+						}
 						break;
+
 					// * bitmap
 					case 'i':
-						ft_add_bitmap(drw, bitmaps, &x, y, fh, ptr, len);
+						item->func = ft_add_bitmap;
+						i = atoi(ptr+1);
+						if(i>0 && i<bitmaps->len) {
+							item->data[0].b = bitmaps[i];
+							w += item->w = bitmaps[i]->w;
+						}
 						break;
-					// * bargraph with bitmap
-					case 'G':
-					case 'g':
-						ft_add_bitmap_bargraph(drw, bitmaps, &x, y, fh, ptr, len);
+
+					// * bitmap as bargraph
+					case 'G': case 'g':
+						item->func = ft_add_bitmap_bargraph;
+						for(i = 1; seq[i] && (seq[i]!=','); i++);
+						if(len>3 && i<len) {
+							ptr[i] = '\0';
+							i = atoi(ptr+1);
+							if(i>0 && i<bitmaps->len) {
+								item->data[0].b = bitmaps[i];
+								w += item->w = bitmaps[i]->w;
+								item->data[1].i = atoi(ptr+i+1);
+							}
+							ptr[i] = ',';
+						}
 						break;
-					// * delimiter
-					// case 'd':
-					// 	ptr[i] = ';';
-					// 	rptr = ptr + i + 1;
-					// 	ptr = buf = sstrings[atoi(ptr+1)];
-					// 	i=-1;
-					// 	drw_fancytext(drw, x, y, w, h, )
-					// 	break;
+
 					default:
 						printf("fancytext: unknown operator '%c' in '%s'\n", *ptr, ptr + 1);
 						break;
 				}
 				ptr[len] = ';';
-				text = ptr = ptr + len + 1;
 			} else {
 				printf("fancytext: malformated sequence '%s'\n", ptr);
+				continue;
 			}
-			
+		} else {
+			// seek for begin of conrol sequence (^[)
+			// everything else is the current simple text string
+			for(len = 0; ptr[len] && (ptr[len]!='^' || ptr[len+1]!='['); len++);
+
+			// everything before the conrol sequence is plain text
+			if(len) {
+				// text
+				item->func = ft_add_text;
+				w += item->w = TEXTNW(text, len);
+				item->data.s = text;
+				item->len = len;
+			}
+		}
+		ptr += len + 1;
+		if(item->func!=NULL) {
+			item->next = calloc(1, sizeof(barItem));
+			item = item->next;
 		}
 	}
+
+	return w;
 }

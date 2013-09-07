@@ -14,13 +14,17 @@ typedef struct {
 
 typedef union {
 	char *s;
-	unsigned int i;
+	int i;
+    Clr *c;
+    Bitmap *b;
 } ft_data;
 
 typedef struct {
 	void (*func)(void *data);
 	int w;
-	ft_data data[3];
+    int len;
+    char k;
+	ft_data data[2];
 	barItem *next;
 } barItem;
 
