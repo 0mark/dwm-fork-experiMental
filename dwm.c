@@ -284,6 +284,7 @@ static Fnt *fnt;
 static Monitor *mons, *selmon;
 static Window root;
 static Clientlist *cl;
+static BitmapSet *bitmaps;
 
 /* configuration, allows nested code to access above variables */
 #include "config.h"
@@ -753,6 +754,7 @@ drawbar(Monitor *m) {
 	int x, xx, w;
 	unsigned int i, occ = 0, urg = 0;
 	Client *c;
+	barItem *item;
 
 	for(c = cl->clients; c; c = c->next) {
 		occ |= c->tags;
@@ -774,13 +776,16 @@ drawbar(Monitor *m) {
 	x += w;
 	xx = x;
 	if(m == selmon) { /* status is only drawn on selected monitor */
-		w = TEXTW(stext);
+		item = calloc(sizeof(barItem), 1);
+		w = drw_fancytext_prepare(drw, bitmaps, stext, item);
+		//w = TEXTW(stext);
 		x = m->ww - w;
 		if(x < xx) {
 			x = xx;
 			w = m->ww - xx;
 		}
-		drw_text(drw, x, 0, w, bh, stext, 0);
+		drw_fancytext(drw, x, 0, w, bh, item);
+		//drw_text(drw, x, 0, w, bh, stext, 0);
 	}
 	else
 		x = m->ww;
@@ -1551,7 +1556,8 @@ setmfact(const Arg *arg) {
 void
 setup(void) {
 	XSetWindowAttributes wa;
-	int i;
+	const unsigned char *mapptr = allbits;
+	int i, c = 0;
 
 	/* clean up any zombies immediately */
 	sigchld(0);
@@ -1605,6 +1611,20 @@ setup(void) {
 	scheme[SchemeSel].border = drw_clr_create(drw, selbordercolor);
 	scheme[SchemeSel].bg = drw_clr_create(drw, selbgcolor);
 	scheme[SchemeSel].fg = drw_clr_create(drw, selfgcolor);
+	/* init bitmaps */
+	XALLOC(bitmaps, sizeof(BitmapSet), 1);
+	for(i = 0; i < LENGTH(allbits)-2; i += (allbits[0]*allbits[1])/8 + 2, c++);
+	XALLOC(bitmaps->items, sizeof(Bitmap*), c);
+	for(i = 0; i < c; i++) {
+		if(mapptr[0] && mapptr[1] && mapptr[2]) {
+			XALLOC(bitmaps->items[i], sizeof(Bitmap), 1);
+			bitmaps->items[i]->w = mapptr[0];
+			bitmaps->items[i]->h = mapptr[1];
+			bitmaps->items[i]->pix = XCreateBitmapFromData(dpy, root, (char *)mapptr+2, bitmaps->items[i]->w, bitmaps->items[i]->h);
+			mapptr += (bitmaps->items[i]->w*bitmaps->items[i]->h)/8 + 2;
+		}
+	}
+
 	/* init bars */
 	updatebars();
 	updatestatus();
@@ -2040,7 +2060,8 @@ updatetitle(Client *c) {
 void
 updatestatus(void) {
 	if(!gettextprop(root, XA_WM_NAME, stext, sizeof(stext)))
-		strcpy(stext, "dwm-"VERSION);
+		strcpy(stext, "$$ ^[ff91;dw^[f;m ^[b2f7;X^[b; ^[v3; ^[h4; $$");
+		//strcpy(stext, "dwm-"VERSION);
 	drawbar(selmon);
 }
 

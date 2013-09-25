@@ -140,7 +140,21 @@ drw_rect(Drw *drw, int x, int y, unsigned int w, unsigned int h, int filled, int
 }
 
 void
-drw_textn(Drw *drw, int x, int y, unsigned int w, unsigned int h, const char *text, int olen, int invert) {
+drw_rect2(Drw *drw, int x, int y, unsigned int w, unsigned int h, int filled, int empty, int invert) {
+	int dx;
+
+	if(!drw || !drw->font || !drw->scheme)
+		return;
+	XSetForeground(drw->dpy, drw->gc, invert ? drw->scheme->bg->rgb : drw->scheme->fg->rgb);
+	//dx = (drw->font->ascent + drw->font->descent + 2) / 4;
+	if(filled)
+		XFillRectangle(drw->dpy, drw->drawable, drw->gc, x, y, w, h);
+	else if(empty)
+		XDrawRectangle(drw->dpy, drw->drawable, drw->gc, x, y, w, h);
+}
+
+void
+drw_textn(Drw *drw, int x, int y, unsigned int w, unsigned int h, const char *text, int olen, int invert, Bool center) {
 	char buf[256];
 	int i, tx, ty, th, len;
 	Extnts tex;
@@ -154,9 +168,9 @@ drw_textn(Drw *drw, int x, int y, unsigned int w, unsigned int h, const char *te
 	drw_font_getexts(drw->font, text, olen, &tex);
 	th = drw->font->ascent + drw->font->descent;
 	ty = y + (h / 2) - (th / 2) + drw->font->ascent;
-	tx = x + (h / 2);
+	tx = x + (center ? (h / 2) : 0);
 	/* shorten text if necessary */
-	for(len = MIN(olen, sizeof buf); len && (tex.w > w - tex.h || w < tex.h); len--)
+	for(len = MIN(olen, sizeof buf); len && (center ? (tex.w > w - tex.h || w < tex.h) : tex.w > w); len--)
 		drw_font_getexts(drw->font, text, len, &tex);
 	if(!len)
 		return;
@@ -172,7 +186,7 @@ drw_textn(Drw *drw, int x, int y, unsigned int w, unsigned int h, const char *te
 
 void
 drw_text(Drw *drw, int x, int y, unsigned int w, unsigned int h, const char *text, int invert) {
-	drw_textn(drw, x, y, w, h, text, strlen(text), invert);
+	drw_textn(drw, x, y, w, h, text, text ? strlen(text) : 0, invert, True);
 }
 
 void
