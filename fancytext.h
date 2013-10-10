@@ -22,7 +22,7 @@ typedef union {
 typedef struct barItem barItem;
 
 struct barItem {
-	void (*func)(Drw *drw, int x, int y, unsigned int h, barItem *item);
+	void (*func)(Drw *drw, int x, int y, unsigned int h, unsigned int fh, barItem *item);
 	int w;
     int len;
     char k;
@@ -30,13 +30,13 @@ struct barItem {
 	barItem *next;
 };
 
-void drw_bitmap(Drw *drw, int x, int y, unsigned int w, unsigned int h, Bitmap *bm);
+void drw_bitmap(Drw *drw, int tx, int ty, unsigned int w, unsigned int h, int sx, int sy, Bitmap *bm);
 void drw_bargraph(Drw *drw, int x, int y, unsigned int w, unsigned int h, Bool horizontal, int val);
 void drw_bitmap_bargraph(Drw *drw, int x, int y, unsigned int w, unsigned int h, Bool horizontal, int val, Bitmap *bm);
-void ft_set_color(Drw *drw, int x, int y, unsigned int h, barItem *item);
-void ft_add_bargraph(Drw *drw, int x, int y, unsigned int h, barItem *item);
-void ft_add_bitmap(Drw *drw, int x, int y, unsigned int h, barItem *item);
-void ft_add_bitmap_bargraph(Drw *drw, int x, int y, unsigned int h, barItem *item);
-void ft_add_text(Drw *drw, int x, int y, unsigned int h, barItem *item);
+void ft_set_color(Drw *drw, int x, int y, unsigned int h, unsigned int fh, barItem *item);
+void ft_add_bargraph(Drw *drw, int x, int y, unsigned int h, unsigned int fh, barItem *item);
+void ft_add_bitmap(Drw *drw, int x, int y, unsigned int h, unsigned int fh, barItem *item);
+void ft_add_bitmap_bargraph(Drw *drw, int x, int y, unsigned int h, unsigned int fh, barItem *item);
+void ft_add_text(Drw *drw, int x, int y, unsigned int h, unsigned int fh, barItem *item);
 void drw_fancytext(Drw *drw, int x, int y, unsigned int w, unsigned int h, barItem *item);
 int drw_fancytext_prepare(Drw *drw, BitmapSet *bitmaps, char *text, barItem *item);

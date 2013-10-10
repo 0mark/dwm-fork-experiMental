@@ -1616,13 +1616,14 @@ setup(void) {
 	for(i = 0; i < LENGTH(allbits)-2; i += (allbits[0]*allbits[1])/8 + 2, c++);
 	XALLOC(bitmaps->items, sizeof(Bitmap*), c);
 	for(i = 0; i < c; i++) {
-		if(mapptr[0] && mapptr[1] && mapptr[2]) {
+		//if(mapptr[0] && mapptr[1] && mapptr[2]) {
 			XALLOC(bitmaps->items[i], sizeof(Bitmap), 1);
 			bitmaps->items[i]->w = mapptr[0];
 			bitmaps->items[i]->h = mapptr[1];
 			bitmaps->items[i]->pix = XCreateBitmapFromData(dpy, root, (char *)mapptr+2, bitmaps->items[i]->w, bitmaps->items[i]->h);
+			bitmaps->len++;
 			mapptr += (bitmaps->items[i]->w*bitmaps->items[i]->h)/8 + 2;
-		}
+		//}
 	}
 
 	/* init bars */
@@ -2060,7 +2061,7 @@ updatetitle(Client *c) {
 void
 updatestatus(void) {
 	if(!gettextprop(root, XA_WM_NAME, stext, sizeof(stext)))
-		strcpy(stext, "$$ ^[ff91;dw^[f;m ^[b2f7;X^[b; ^[v3; ^[h4; $$");
+		strcpy(stext, "$$ ^[ff91;dw^[f;m =^[b2f7;X^[b;= =^[v3;= =^[h4;= =^[i0;=^[i7;= =^[g2,5;= =^[G3,6;= $$");
 		//strcpy(stext, "dwm-"VERSION);
 	drawbar(selmon);
 }
