@@ -22,17 +22,17 @@ void drw_bargraph(Drw *drw, int x, int y, unsigned int w, unsigned int h, Bool h
 	drw->scheme->bg = drw->scheme->border;
 	drw->scheme->border = ctmp;
 
-	range = horizontal ? h : w;
+	range = horizontal ? w : h;
 
 	v = MAX(MIN(val, 9), 0) / 9.0;
 	n = range * v;
 
 	if(horizontal) {
-		drw_rect2(drw, x, y,             w, range - n, True, False, True);
-		drw_rect2(drw, x, y + range - n, w, n,         True, False, False);
-	} else/*vertical*/ {
 		drw_rect2(drw, x,     y, n,         h, True, False, False);
 		drw_rect2(drw, x + n, y, range - n, h, True, False, True);
+	} else/*vertical*/ {
+		drw_rect2(drw, x, y,         w, range - n,         True, False, True);
+		drw_rect2(drw, x, y + h - n, w, h - range - n, True, False, False);
 	}
 
 	drw->scheme->border = drw->scheme->bg;
@@ -88,9 +88,9 @@ void ft_add_bargraph(Drw *drw, int x, int y, unsigned int h, unsigned int fh, ba
 	XFillRectangle(drw->dpy, drw->drawable, drw->gc, x, y, item->w, h);
 
 	if(item->k=='h') {
-		drw_bargraph(drw, x + fh/8, y + h/2 - (h - fh/4)/2, h/3, h - fh/4, True, item->data[0].i);
+		drw_bargraph(drw, x + fh/8, y + h/2 - (fh/2-2)/2, fh*2, fh/2 - 2, True, item->data[0].i);
 	} else {
-		drw_bargraph(drw, x + fh/8, y + h/2 - (fh/2-2)/2, fh*2, fh/2 - 2, False, item->data[0].i);
+		drw_bargraph(drw, x + fh/8, y + h/2 - (h - fh/4)/2, h/3, h - fh/4, False, item->data[0].i);
 	}
 }
 
@@ -112,11 +112,16 @@ void ft_add_bitmap_bargraph(Drw *drw, int x, int y, unsigned int h, unsigned int
 	XSetForeground(drw->dpy, drw->gc, drw->scheme->bg->rgb);
 	XFillRectangle(drw->dpy, drw->drawable, drw->gc, x, y, item->w, h);
 
-	drw_bitmap_bargraph(drw, ALIGN(x, y, item->w, h, bm->w, bm->h), item->k=='G', item->data[1].i, bm);
+	drw_bitmap_bargraph(drw, ALIGN(x, y, item->w, h, bm->w, bm->h), item->k=='g', item->data[1].i, bm);
 }
 
 void ft_add_text(Drw *drw, int x, int y, unsigned int h, unsigned int fh, barItem *item) {
+	//printf("%s, %d\n", item->data[0].s, item->len);
+	//char c = item->data[0].s[item->len];
+	//item->data[0].s[item->len] = 0;
+	//printf("%s, %d\n", item->data[0].s, item->len);
 	drw_textn(drw, x, y, item->w, h, item->data[0].s, item->len, False, False);
+	//item->data[0].s[item->len] = c;
 }
 
 void drw_fancytext(Drw *drw, int x, int y, unsigned int w, unsigned int h, barItem *item) {
@@ -155,13 +160,13 @@ void drw_fancytext(Drw *drw, int x, int y, unsigned int w, unsigned int h, barIt
 int drw_fancytext_prepare(Drw *drw, BitmapSet *bitmaps, char *text, barItem *item) {
 	char *ptr = text;
 	int len, fh = drw->font->ascent + drw->font->descent + 2, i, n, w = drw->font->h;
-
+//printf("%s\n\n", ptr);
 	while(*ptr) {
 		if(*ptr=='^' && ptr[1]=='[') {
 			// seek for end of control sequence
 			ptr += 2;
 			for(len = 0; ptr[len] && (ptr[len]!=';'); len++);
-
+//printf("%s, %d\n", ptr, len);
 			if(len) {
 				item->k = *ptr;
 				ptr[len] = '\0';
@@ -179,7 +184,7 @@ int drw_fancytext_prepare(Drw *drw, BitmapSet *bitmaps, char *text, barItem *ite
 					// * bargraph
 					case 'v': case 'h':
 						item->func = &ft_add_bargraph;
-						w += item->w = (*ptr=='h' ? fh/3 : fh*2) + fh/4;
+						w += item->w = (*ptr=='h' ? fh*2 : fh/3) + fh/6;
 						if(len==2) {
 							item->data[0].i = atoi(ptr+1);
 						}
@@ -189,10 +194,11 @@ int drw_fancytext_prepare(Drw *drw, BitmapSet *bitmaps, char *text, barItem *ite
 					case 'i':
 						item->func = &ft_add_bitmap;
 						i = atoi(ptr + 1);
-						if(i>=0 && i<bitmaps->len) {
+						if(i>bitmaps->len) i = 0;
+						//if(i>=0 && i<bitmaps->len) {
 							item->data[0].b = bitmaps->items[i];
-							w += item->w = bitmaps->items[i]->w + fh/2;
-						}
+							w += item->w = bitmaps->items[i]->w + fh/6;
+						//}
 						break;
 
 					// * bitmap as bargraph
@@ -202,11 +208,12 @@ int drw_fancytext_prepare(Drw *drw, BitmapSet *bitmaps, char *text, barItem *ite
 						if(len>3 && i<len) {
 							ptr[i] = '\0';
 							n = atoi(ptr+1);
-							if(i>0 && i<bitmaps->len) {
+							if(n>=bitmaps->len) n = 0;
+							//if(n>0 && n<bitmaps->len) {
 								item->data[0].b = bitmaps->items[n];
-								w += item->w = bitmaps->items[n]->w + fh/2;
+								w += item->w = bitmaps->items[n]->w + fh/6;
 								item->data[1].i = atoi(ptr+i+1);
-							}
+							//}
 							ptr[i] = ',';
 						}
 						break;
@@ -228,7 +235,8 @@ int drw_fancytext_prepare(Drw *drw, BitmapSet *bitmaps, char *text, barItem *ite
 			// everything before the control sequence is plain text
 			if(len) {
 				item->func = &ft_add_text;
-				//printf("%.*s\n", len, ptr);
+				//printf("--%.*s--  %s\n", len, ptr, ptr);
+				//printf("--%s--  %d\n", ptr, len);
 				w += item->w = drw_font_getexts_width(drw->font, ptr, len);
 				item->data[0].s = ptr;
 				item->len = len;

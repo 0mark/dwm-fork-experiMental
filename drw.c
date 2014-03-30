@@ -94,6 +94,7 @@ drw_clr_create(Drw *drw, const char *clrname) {
 	Clr *clr;
 	Colormap cmap;
 	XColor color;
+	const char* fbcn = "#eee";
 
 	if(!drw)
 		return NULL;
@@ -101,8 +102,11 @@ drw_clr_create(Drw *drw, const char *clrname) {
 	if(!clr)
 		return NULL;
 	cmap = DefaultColormap(drw->dpy, drw->screen);
-	if(!XAllocNamedColor(drw->dpy, cmap, clrname, &color, &color))
-		die("error, cannot allocate color '%s'\n", clrname);
+	if(!XAllocNamedColor(drw->dpy, cmap, clrname, &color, &color)) {
+		printf("warning, cannot allocate color '%s', trying fallback\n", clrname);
+		if(!XAllocNamedColor(drw->dpy, cmap, fbcn, &color, &color))
+			die("error, cannot allocate fallback color '%s'\n", fbcn);
+	}
 	clr->rgb = color.pixel;
 	return clr;
 }
@@ -141,12 +145,9 @@ drw_rect(Drw *drw, int x, int y, unsigned int w, unsigned int h, int filled, int
 
 void
 drw_rect2(Drw *drw, int x, int y, unsigned int w, unsigned int h, int filled, int empty, int invert) {
-	int dx;
-
 	if(!drw || !drw->font || !drw->scheme)
 		return;
 	XSetForeground(drw->dpy, drw->gc, invert ? drw->scheme->bg->rgb : drw->scheme->fg->rgb);
-	//dx = (drw->font->ascent + drw->font->descent + 2) / 4;
 	if(filled)
 		XFillRectangle(drw->dpy, drw->drawable, drw->gc, x, y, w, h);
 	else if(empty)
@@ -175,8 +176,10 @@ drw_textn(Drw *drw, int x, int y, unsigned int w, unsigned int h, const char *te
 	if(!len)
 		return;
 	memcpy(buf, text, len);
+	//buf[MIN(len, sizeof buf)] = 0;
 	if(len < olen)
 		for(i = len; i && i > len - 3; buf[--i] = '.');
+			//printf("-%s-, %s, %d, %d\n", buf, text, len, olen);
 	XSetForeground(drw->dpy, drw->gc, invert ? drw->scheme->bg->rgb : drw->scheme->fg->rgb);
 	if(drw->font->set)
 		XmbDrawString(drw->dpy, drw->drawable, drw->font->set, drw->gc, tx, ty, buf, len);

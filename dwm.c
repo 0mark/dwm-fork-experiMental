@@ -101,6 +101,7 @@ struct Client {
 	Client *snext;
 	Monitor *mon;
 	Window win;
+	Bool isscratch; // TODO
 };
 
 typedef struct {
@@ -119,7 +120,13 @@ typedef struct {
 	Bool topbar;
 } Layout;
 
-typedef struct Pertag Pertag;
+//typedef struct Pertag Pertag;
+typedef struct {
+	char **names;
+	Layout ***ltidxs; /* matrix of tags and layouts indexes  */
+	unsigned int *sellts; /* selected layouts */
+} Pertag;
+
 typedef struct Clientlist Clientlist;
 
 struct Monitor {
@@ -252,7 +259,7 @@ static void zoom(const Arg *arg);
 
 /* variables */
 static const char broken[] = "broken";
-static char stext[256];
+static char stext[512];
 static int screen;
 static int sw, sh;           /* X display screen geometry width, height */
 static int bh, blw = 0;      /* bar geometry */
@@ -285,15 +292,17 @@ static Monitor *mons, *selmon;
 static Window root;
 static Clientlist *cl;
 static BitmapSet *bitmaps;
+static Bool isscratched; // TODO
+static Client *scratch; // TODO
 
 /* configuration, allows nested code to access above variables */
 #include "config.h"
 
-struct Pertag {
-	char *names[LENGTH(tags) + 1];
-	Layout *ltidxs[LENGTH(tags) + 1][2]; /* matrix of tags and layouts indexes  */
-	unsigned int sellts[LENGTH(tags) + 1]; /* selected layouts */
-};
+//struct Pertag {
+//	char *names[LENGTH(tags) + 1];
+//	Layout *ltidxs[LENGTH(tags) + 1][2]; /* matrix of tags and layouts indexes  */
+//	unsigned int sellts[LENGTH(tags) + 1]; /* selected layouts */
+//};
 
 /* compile-time check if all tags fit into an unsigned int bit array. */
 struct NumTags { char limitexceeded[LENGTH(tags) > 31 ? -1 : 1]; };
@@ -1567,8 +1576,15 @@ setup(void) {
 		die("fatal: could not malloc() %u bytes\n", sizeof(Clientlist));
 	if(!(cl->pertag = (Pertag *)calloc(1, sizeof(Pertag))))
 		die("fatal: could not malloc() %u bytes\n", sizeof(Pertag));
+	if(!(cl->pertag->names = (char **)calloc(LENGTH(tags), sizeof(char *))))
+		die("fatal: could not malloc() %u bytes\n", LENGTH(tags) * sizeof(char *));
+	if(!(cl->pertag->ltidxs = (Layout ***)calloc(LENGTH(tags), sizeof(Layout***))))
+		die("fatal: could not malloc() %u bytes\n", LENGTH(tags) * sizeof(Layout**));
+	if(!(cl->pertag->sellts = (unsigned int *)calloc(LENGTH(tags), sizeof(unsigned int))))
+		die("fatal: could not malloc() %u bytes\n", LENGTH(tags) * sizeof(unsigned int));
 	for(i=0; i < LENGTH(tags); i++) {
 		/* init layouts */
+		XALLOC(cl->pertag->ltidxs[i], Layout **, 2);
 		XALLOC(cl->pertag->ltidxs[i][0], Layout, 1);
 		XALLOC(cl->pertag->ltidxs[i][1], Layout, 1);
 		memcpy(cl->pertag->ltidxs[i][0], &layouts[tags[i].ltidxs[0]], sizeof(Layout));
@@ -1760,6 +1776,87 @@ togglefloating(const Arg *arg) {
 }
 
 void
+toggle_scratch(const Arg *arg) {
+	XWindowChanges wc;
+	Client *t = NULL, *s = NULL, *p = NULL;
+
+	// Es ist bereits ein Scratch sichtbar
+	if(isscratched) {
+		// Den sichtbaren Scratch in der cl suchen
+		for(t = cl->clients; t; t = t->next) {
+			if(t->isscratch == isscratched) {
+				s = t;
+			}
+		}
+		if(s) {
+			// Den sichtbaren Scratch entfernen
+			unfocus(s, True);
+			detach(s);
+			detachstack(s);
+			s->next = s->snext = NULL;
+			XLowerWindow(dpy, s->win);
+			XMoveWindow(dpy, s->win, s->x + 2 * sw, s->y);
+			setclientstate(s, IconicState);
+			focus(NULL);
+			arrange(NULL);
+
+			// Den entfernten Scratch an die Scratchlist hängen
+			if(scratch==NULL) {
+				scratch = s;
+			} else {
+				for(t = scratch; t->next; t = t->next);
+				t->next = s;
+			}
+			isscratched = False;
+			// Wenn der entfernte Scratch der war der getoggled werden sollte sind wir fertig
+			if(arg->i==isscratched)
+				return;
+		} else {
+			isscratched = False;
+			return;
+		}
+	}
+
+	if(!scratch)
+		return;
+
+	// Das zu toggelnde Scratch suchen und aus der Scratchlist entfernen
+	p = NULL;
+	for(t = scratch; t; t = t->next) {
+		if(t->isscratch == arg->i) {
+			s = t;
+			if(p) p->next = t->next;
+			else scratch = t->next;
+		}
+		if(!p) p = t;
+		else p = p->next;
+	}
+
+	if(!s) return;
+
+	// Auf alle Tags legen, auf den aktuellen Monitor legen
+	s->tags = ~0;
+	s->mon = selmon;
+	// Zentrieren
+	s->x = s->mon->mx + (s->mon->mw - s->w) / 2;
+	s->y = s->mon->my + (s->mon->mh - s->h) / 2;
+	// Anzeigen
+	wc.border_width = s->bw;
+	XConfigureWindow(dpy, s->win, CWBorderWidth, &wc);
+	XSetWindowBorder(dpy, s->win, scheme[SchemeNorm].border->rgb);
+	XRaiseWindow(dpy, s->win);
+	XMoveWindow(dpy, s->win, s->x, s->y);
+	attach(s); // TODO ??
+	attachstack(s);
+	XMoveResizeWindow(dpy, s->win, s->x + 2 * s->bw, s->y, s->w, s->h); /* some windows require this */
+	XMapWindow(dpy, s->win);
+	setclientstate(s, NormalState);
+	focus(s);
+	// Angezeigtes Sratch merken
+	isscratched = arg->i;
+}
+
+void
 toggletag(const Arg *arg) {
 	Monitor *m;
 	unsigned int newtags;
@@ -1779,6 +1876,7 @@ toggletag(const Arg *arg) {
 }
 
 void
+
 toggleview(const Arg *arg) {
 	Monitor *m;
 	unsigned int newtagset = selmon->tagset[selmon->seltags] ^ (arg->ui & TAGMASK);
@@ -2061,8 +2159,8 @@ updatetitle(Client *c) {
 void
 updatestatus(void) {
 	if(!gettextprop(root, XA_WM_NAME, stext, sizeof(stext)))
-		strcpy(stext, "$$ ^[ff91;dw^[f;m =^[b2f7;X^[b;= =^[v3;= =^[h4;= =^[i0;=^[i7;= =^[g2,5;= =^[G3,6;= $$");
-		//strcpy(stext, "dwm-"VERSION);
+		//strcpy(stext, "$$ ^[ff91;dw^[f;m =^[b2f7;X^[b;= =^[v3;= =^[h4;= =^[i0;=^[i7;= =^[g2,5;= =^[G3,6;= $$");
+		strcpy(stext, "dwm-"VERSION);
 	drawbar(selmon);
 }
 
