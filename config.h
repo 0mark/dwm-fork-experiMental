@@ -12,39 +12,39 @@ static const unsigned int borderpx  = 1;        /* border pixel of windows */
 static const unsigned int snap      = 32;       /* snap pixel */
 
 static const Rule rules[] = {
-	/* class            instance               title         tags mask     isfloating   monitor */
+	/* class            instance               title         tags mask     isfloating   monitor   scratch? */
 // to tab
-	{ "luakit",         NULL,                  NULL,         1 << 1,       False,       -1 },
-	{ "Firefox",        NULL,                  NULL,         1 << 1,       False,       -1 },
-	{ "deluge",         NULL,                  NULL,         1 << 8,       False,       -1 },
-	{ "Gimp-2.7",       NULL,                  NULL,         1 << 3,       False,       -1 },
+	{ "luakit",         NULL,                  NULL,         1 << 1,       False,       -1,       False },
+	{ "Firefox",        NULL,                  NULL,         1 << 1,       False,       -1,       False },
+	{ "deluge",         NULL,                  NULL,         1 << 8,       False,       -1,       False },
+	{ "Gimp-2.7",       NULL,                  NULL,         1 << 3,       False,       -1,       False },
 
 // float
-	{ "MPlayer",        NULL,                  NULL,         0,            True,        -1 },
-	{ "vncviewer",      NULL,                  NULL,         0,            True,        -1 },
-	{ "sxiv",           NULL,                  NULL,         0,            True,        -1 },
-	{ "Zenity",         NULL,                  NULL,         0,            True,        -1 },
-	{ "Xdialog",        NULL,                  NULL,         0,            True,        -1 },
-//	{ NULL,             NULL,                  "ncmpcpp",    0,            True,        -1 },
+	{ "MPlayer",        NULL,                  NULL,         0,            True,        -1,       False },
+	{ "vncviewer",      NULL,                  NULL,         0,            True,        -1,       False },
+	{ "sxiv",           NULL,                  NULL,         0,            True,        -1,       False },
+	{ "Zenity",         NULL,                  NULL,         0,            True,        -1,       False },
+	{ "Xdialog",        NULL,                  NULL,         0,            True,        -1,       False },
+//	{ NULL,             NULL,                  "ncmpcpp",    0,            True,        -1,       False },
 
 // opacity
-	{ "URxvt",          NULL,                  NULL,         0,            False,       -1 },
+	{ "URxvt",          NULL,                  NULL,         0,            False,       -1,       False },
 
 // scratchpads
-	{ NULL,             "dwm-scratchpad",      NULL,        ~0,            True,        -1 },
-	{ NULL,             "musicApp",            NULL,        ~0,            True,        -1 },
-	{ NULL,             "mixApp",              NULL,        ~0,            True,        -1 },
+	{ NULL,             "dwm-scratchpad",      NULL,        ~0,            True,        -1,       1 },
+	{ NULL,             "musicApp",            NULL,        ~0,            True,        -1,       2 },
+	{ NULL,             "mixApp",              NULL,        ~0,            True,        -1,       3 },
 
 // dynamic to tab
-	{ NULL,             "DWM-TAG1",            NULL,         1 << 0,       False,       -1 },
-	{ NULL,             "DWM-TAG2",            NULL,         1 << 1,       False,       -1 },
-	{ NULL,             "DWM-TAG3",            NULL,         1 << 2,       False,       -1 },
-	{ NULL,             "DWM-TAG4",            NULL,         1 << 3,       False,       -1 },
-	{ NULL,             "DWM-TAG5",            NULL,         1 << 4,       False,       -1 },
-	{ NULL,             "DWM-TAG6",            NULL,         1 << 5,       False,       -1 },
-	{ NULL,             "DWM-TAG7",            NULL,         1 << 6,       False,       -1 },
-	{ NULL,             "DWM-TAG8",            NULL,         1 << 7,       False,       -1 },
-	{ NULL,             "DWM-TAG9",            NULL,         1 << 8,       False,       -1 },
+	{ NULL,             "DWM-TAG1",            NULL,         1 << 0,       False,       -1,       False },
+	{ NULL,             "DWM-TAG2",            NULL,         1 << 1,       False,       -1,       False },
+	{ NULL,             "DWM-TAG3",            NULL,         1 << 2,       False,       -1,       False },
+	{ NULL,             "DWM-TAG4",            NULL,         1 << 3,       False,       -1,       False },
+	{ NULL,             "DWM-TAG5",            NULL,         1 << 4,       False,       -1,       False },
+	{ NULL,             "DWM-TAG6",            NULL,         1 << 5,       False,       -1,       False },
+	{ NULL,             "DWM-TAG7",            NULL,         1 << 6,       False,       -1,       False },
+	{ NULL,             "DWM-TAG8",            NULL,         1 << 7,       False,       -1,       False },
+	{ NULL,             "DWM-TAG9",            NULL,         1 << 8,       False,       -1,       False },
 };
 
 /* layout(s) */
@@ -75,7 +75,7 @@ static const TagPreset tags[] = {
 };
 
 /* key definitions */
-#define MODKEY Mod4Mask
+#define MODKEY Mod1Mask
 #define TAGKEYS(KEY,TAG) \
 	{ MODKEY,                       KEY,      view,           {.ui = 1 << TAG} }, \
 	{ MODKEY|ShiftMask,             KEY,      toggleview,     {.ui = 1 << TAG} }, \
@@ -88,7 +88,7 @@ static const TagPreset tags[] = {
 /* commands */
 static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
 static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", font, "-nb", normbgcolor, "-nf", normfgcolor, "-sb", selbgcolor, "-sf", selfgcolor, NULL };
-static const char *termcmd[]   = { "urxvt -fg white -bg block", NULL };
+static const char *termcmd[]   = { "urxvt", "-fg", "white", "-bg", "black", NULL };
 static const char *keycmd[]    = { "xbindkeys", NULL };
 //static const char *urgentcmd[] = { "thinkalert", "2", NULL };
 
@@ -118,9 +118,9 @@ static Key keys[] = {
 	//{ Mod1Mask,                     XK_Tab,     focustoggle,    {0} },
 	/* -- */
 	/* set layout */
-	//{ MODKEY,                       XK_space,   toggle_scratch, {.i = 1} },
-	//{ MODKEY,                       XK_n,       toggle_scratch, {.i = 2} },
-	//{ MODKEY,                       XK_l,       toggle_scratch, {.i = 3} },
+	{ MODKEY,                       XK_space,   toggle_scratch, {.i = 1} },
+	{ MODKEY,                       XK_n,       toggle_scratch, {.i = 2} },
+	{ MODKEY,                       XK_l,       toggle_scratch, {.i = 3} },
 	{ MODKEY|ShiftMask,             XK_space,   setlayout,      {0} },
 	{ MODKEY|ControlMask,           XK_space,   togglefloating, {0} },
 	{ MODKEY|ShiftMask,             XK_Delete,  killclient,     {0} },

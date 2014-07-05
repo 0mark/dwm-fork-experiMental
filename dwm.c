@@ -101,7 +101,7 @@ struct Client {
 	Client *snext;
 	Monitor *mon;
 	Window win;
-	Bool isscratch; // TODO
+	Bool scratch;
 };
 
 typedef struct {
@@ -150,6 +150,7 @@ typedef struct {
 	unsigned int tags;
 	Bool isfloating;
 	int monitor;
+	unsigned int scratch;
 } Rule;
 
 struct Clientlist {
@@ -236,6 +237,7 @@ static void togglebar(const Arg *arg);
 static void togglefloating(const Arg *arg);
 static void toggletag(const Arg *arg);
 static void toggleview(const Arg *arg);
+static void toggle_scratch(const Arg *arg);
 static void unfocus(Client *c, Bool setfocus);
 static void unmanage(Client *c, Bool destroyed);
 static void unmapnotify(XEvent *e);
@@ -292,8 +294,8 @@ static Monitor *mons, *selmon;
 static Window root;
 static Clientlist *cl;
 static BitmapSet *bitmaps;
-static Bool isscratched; // TODO
-static Client *scratch; // TODO
+static int isscratched;
+static Client *scratches; // TODO
 
 /* configuration, allows nested code to access above variables */
 #include "config.h"
@@ -317,7 +319,7 @@ applyrules(Client *c) {
 	XClassHint ch = { NULL, NULL };
 
 	/* rule matching */
-	c->isfloating = c->tags = 0;
+	c->isfloating = c->tags = c->scratch = 0;
 	XGetClassHint(dpy, c->win, &ch);
 	class    = ch.res_class ? ch.res_class : broken;
 	instance = ch.res_name  ? ch.res_name  : broken;
@@ -333,13 +335,15 @@ applyrules(Client *c) {
 			for(m = mons; m && (m->tagset[m->seltags] & c->tags) == 0; m = m->next) ;
 			if(m)
 				c->mon = m;
+			c->scratch = r->scratch;
 		}
 	}
 	if(ch.res_class)
 		XFree(ch.res_class);
 	if(ch.res_name)
 		XFree(ch.res_name);
-	c->tags = c->tags & TAGMASK ? c->tags & TAGMASK : c->mon->tagset[c->mon->seltags];
+    if(!c->tags && !c->scratch)
+		c->tags = c->tags & TAGMASK ? c->tags & TAGMASK : c->mon->tagset[c->mon->seltags];
 }
 
 Bool
@@ -766,17 +770,18 @@ drawbar(Monitor *m) {
 	barItem *item;
 
 	for(c = cl->clients; c; c = c->next) {
-		occ |= c->tags;
-		if(c->isurgent)
-			urg |= c->tags;
+		if(!c->scratch) {
+			occ |= c->tags;
+			if(c->isurgent)
+				urg |= c->tags;
+		}
 	}
 	x = 0;
 	for(i = 0; i < LENGTH(tags); i++) {
 		w = TEXTW(cl->pertag->names[i]);
 		drw_setscheme(drw, m->tagset[m->seltags] & 1 << i ? &scheme[SchemeSel] : &scheme[SchemeNorm]);
 		drw_text(drw, x, 0, w, bh, cl->pertag->names[i], urg & 1 << i);
-		drw_rect(drw, x, 0, w, bh, m == selmon && selmon->sel && selmon->sel->tags & 1 << i,
-		           occ & 1 << i, urg & 1 << i);
+		drw_rect(drw, x, 0, w, bh, m == selmon && selmon->sel && !selmon->sel->scratch && selmon->sel->tags & 1 << i, occ & 1 << i, urg & 1 << i);
 		x += w;
 	}
 	w = blw = TEXTW(m->ltsymbol);
@@ -1080,6 +1085,7 @@ manage(Window w, XWindowAttributes *wa) {
 	Client *c, *t = NULL;
 	Window trans = None;
 	XWindowChanges wc;
+	Bool tainted = False;
 
 	if(!(c = calloc(1, sizeof(Client))))
 		die("fatal: could not malloc() %u bytes\n", sizeof(Client));
@@ -1110,12 +1116,33 @@ manage(Window w, XWindowAttributes *wa) {
 	           && (c->x + (c->w / 2) < c->mon->wx + c->mon->ww)) ? bh : c->mon->my);
 	c->bw = borderpx;
 
+	if(c->scratch) {
+		for(t = scratches; t; t = t->next)
+			if(t->scratch == c->scratch)
+				tainted = True;
+		if(isscratched) // TODO: find scratched client and check !
+			tainted = True;
+		if(!tainted) {
+			if(scratches!=NULL) {
+				for(t = scratches; t->next; t = t->next);
+				t->next = c;
+			} else {
+				scratches = c;
+			}
+		} else // this scratch exists, cant be scratched again
+			c->scratch = False;
+		c->bw = 2 * c->bw + 1;
+ 	}
+
 	wc.border_width = c->bw;
 	XConfigureWindow(dpy, w, CWBorderWidth, &wc);
 	XSetWindowBorder(dpy, w, scheme[SchemeNorm].border->rgb);
 	configure(c); /* propagates border_width, if size doesn't change */
 	updatewindowtype(c);
 	updatesizehints(c);
+
+	if(c->scratch) return;
+
 	updatewmhints(c);
 	XSelectInput(dpy, w, EnterWindowMask|FocusChangeMask|PropertyChangeMask|StructureNotifyMask);
 	grabbuttons(c, False);
@@ -1125,8 +1152,7 @@ manage(Window w, XWindowAttributes *wa) {
 		XRaiseWindow(dpy, c->win);
 	attach(c);
 	attachstack(c);
-	XChangeProperty(dpy, root, netatom[NetClientList], XA_WINDOW, 32, PropModeAppend,
-	                (unsigned char *) &(c->win), 1);
+	XChangeProperty(dpy, root, netatom[NetClientList], XA_WINDOW, 32, PropModeAppend, (unsigned char *) &(c->win), 1);
 	XMoveResizeWindow(dpy, c->win, c->x + 2 * sw, c->y, c->w, c->h); /* some windows require this */
 	setclientstate(c, NormalState);
 	if (c->mon == selmon)
@@ -1777,19 +1803,18 @@ togglefloating(const Arg *arg) {
 
 void
 toggle_scratch(const Arg *arg) {
-	XWindowChanges wc;
-	Client *t = NULL, *s = NULL, *p = NULL;
+	Client *t = NULL, *s = NULL;
 
-	// Es ist bereits ein Scratch sichtbar
+	// if there is allready some scatch visible, remove that first (es kann nur einen geben!)
 	if(isscratched) {
-		// Den sichtbaren Scratch in der cl suchen
+		// find the currently visible scratch
 		for(t = cl->clients; t; t = t->next) {
-			if(t->isscratch == isscratched) {
+			if(t->scratch == isscratched) {
 				s = t;
 			}
 		}
 		if(s) {
-			// Den sichtbaren Scratch entfernen
+			// hide the visible scratch
 			unfocus(s, True);
 			detach(s);
 			detachstack(s);
@@ -1800,59 +1825,59 @@ toggle_scratch(const Arg *arg) {
 			focus(NULL);
 			arrange(NULL);
 
-			// Den entfernten Scratch an die Scratchlist hängen
-			if(scratch==NULL) {
-				scratch = s;
+			// add visible scratch to scratch list
+			if(scratches==NULL) {
+				scratches = s;
 			} else {
-				for(t = scratch; t->next; t = t->next);
+				for(t = scratches; t->next; t = t->next);
 				t->next = s;
 			}
-			isscratched = False;
-			// Wenn der entfernte Scratch der war der getoggled werden sollte sind wir fertig
-			if(arg->i==isscratched)
+
+			// if the just toggled scratch and the scratch that should be toggle, we are done here
+			if(arg->i==isscratched) {
+				isscratched = False;
 				return;
+			}
+			isscratched = False;
 		} else {
+			printf("something went wrong: scratches is null, but isscratched is true\n");
 			isscratched = False;
 			return;
 		}
 	}
-
-	if(!scratch)
-		return;
-
-	// Das zu toggelnde Scratch suchen und aus der Scratchlist entfernen
-	p = NULL;
-	for(t = scratch; t; t = t->next) {
-		if(t->isscratch == arg->i) {
-			s = t;
-			if(p) p->next = t->next;
-			else scratch = t->next;
+	
+	// find the scratch that should be toggled
+	if(scratches && scratches->scratch==arg->i) {
+		s = scratches;
+		scratches = scratches->next;
+	} else
+		for(t = scratches; t; t = t->next) {
+			if(t->next && t->next->scratch == arg->i) {
+				s = t->next;
+				t->next = t->next->next;
+				break;
+			}
 		}
-		if(!p) p = t;
-		else p = p->next;
-	}
 
 	if(!s) return;
 
-	// Auf alle Tags legen, auf den aktuellen Monitor legen
-	s->tags = ~0;
+	unfocus(selmon->sel, False);
+
+	// tag and center the sratch
+	s->tags = selmon->tagset[selmon->seltags];//1;
 	s->mon = selmon;
-	// Zentrieren
-	s->x = s->mon->mx + (s->mon->mw - s->w) / 2;
-	s->y = s->mon->my + (s->mon->mh - s->h) / 2;
-	// Anzeigen
-	wc.border_width = s->bw;
-	XConfigureWindow(dpy, s->win, CWBorderWidth, &wc);
-	XSetWindowBorder(dpy, s->win, scheme[SchemeNorm].border->rgb);
-	XRaiseWindow(dpy, s->win);
-	XMoveWindow(dpy, s->win, s->x, s->y);
-	attach(s); // TODO ??
+	s->x = s->mon->mx + (s->mon->mw - s->w) / 2 - s->bw;
+	s->y = s->mon->my + (s->mon->mh - s->h) / 2 - s->bw;
+	// make it visivle
+	updatesizehints(s);
+	attach(s);
 	attachstack(s);
-	XMoveResizeWindow(dpy, s->win, s->x + 2 * s->bw, s->y, s->w, s->h); /* some windows require this */
-	XMapWindow(dpy, s->win);
 	setclientstate(s, NormalState);
-	focus(s);
-	// Angezeigtes Sratch merken
+	arrange(NULL);
+	XMapWindow(dpy, s->win);
+	focus(NULL);
+
+	// mark visible scratch
 	isscratched = arg->i;
 }
 
@@ -1923,6 +1948,7 @@ unfocus(Client *c, Bool setfocus) {
 void
 unmanage(Client *c, Bool destroyed) {
 	Monitor *m = c->mon;
+	Client *s;
 	XWindowChanges wc;
 
 	/* The server grab construct avoids race conditions. */
@@ -1939,6 +1965,17 @@ unmanage(Client *c, Bool destroyed) {
 		XSetErrorHandler(xerror);
 		XUngrabServer(dpy);
 	}
+	if(scratches == c) {
+		scratches = scratches->next;
+		isscratched = False;
+	}
+	if(scratches!=NULL)
+		for(s = scratches; s; s = s->next)
+			if(c==s->next) {
+				s->next = c->next;
+				isscratched = False;
+				break;
+			}
 	free(c);
 	focus(NULL);
 	updateclientlist();
@@ -2247,6 +2284,11 @@ Client *
 wintoclient(Window w) {
 	Client *c;
 	Monitor *m;
+
+	if(scratches!=NULL)
+		for(c = scratches; c; c = c->next)
+			if(c->win == w)
+				return c;
 
 	for(m = mons; m; m = m->next)
 		for(c = cl->clients; c; c = c->next)
