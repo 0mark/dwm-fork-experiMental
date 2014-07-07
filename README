@@ -49,3 +49,10 @@ Configuration
 -------------
 The configuration of dwm is done by creating a custom config.h
 and (re)compiling the source code.
+
+Patches
+-------
+DWM upstream: (27.08.2013, cdec9782a1789bd5c3a84772fd59abb9da288597)
+Singletagset
+Pertag (modified)
+sparklebar (icons, colors)
