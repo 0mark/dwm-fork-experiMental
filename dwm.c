@@ -158,6 +158,7 @@ struct Monitor {
 	Monitor *next;
 	Window barwin;
 	unsigned int curtag, prevtag; /* current and previous tag */
+	unsigned int titlebarbegin, titlebarend;
 };
 
 typedef struct {
@@ -216,6 +217,7 @@ static void expose(XEvent *e);
 static void focus(Client *c);
 static void focusin(XEvent *e);
 static void focusmon(const Arg *arg);
+static void focusonclick(const Arg *arg);
 static void focusstack(const Arg *arg);
 static Atom getatomprop(Client *c, Atom prop);
 static Bool getrootptr(int *x, int *y);
@@ -539,19 +541,20 @@ buttonpress(XEvent *e) {
 		}
 		else if(ev->x < x + blw)
 			click = ClkLtSymbol;
-		else if(ev->x > selmon->ww - TEXTW(stext))
+		else if(ev->x > selmon->titlebarend)
 			click = ClkStatusText;
-		else
+		else {
+			arg.ui = ev->x;
 			click = ClkWinTitle;
+		}
 	}
 	else if((c = wintoclient(ev->window))) {
 		focus(c);
 		click = ClkClientWin;
 	}
 	for(i = 0; i < LENGTH(buttons); i++)
-		if(click == buttons[i].click && buttons[i].func && buttons[i].button == ev->button
-		&& CLEANMASK(buttons[i].mask) == CLEANMASK(ev->state))
-			buttons[i].func(click == ClkTagBar && buttons[i].arg.i == 0 ? &arg : &buttons[i].arg);
+		if(click == buttons[i].click && buttons[i].func && buttons[i].button == ev->button && CLEANMASK(buttons[i].mask) == CLEANMASK(ev->state))
+			buttons[i].func((click == ClkTagBar || click == ClkWinTitle) && buttons[i].arg.i == 0 ? &arg : &buttons[i].arg);
 }
 
 void
@@ -850,13 +853,15 @@ dirtomon(int dir) {
 
 void
 drawbar(Monitor *m) {
-	int x, xx, w, stw = 0;
-	unsigned int i, occ = 0, urg = 0;
-	Client *c;
+	int x, xx, w, stw = 0, mw = 0, extra;
+	unsigned int i, occ = 0, urg = 0, vis = 0, ow, tw;
+	Client *c, *firstvis, *lastvis;
 	barItem *item;
 
 	resizebarwin(m);
 	for(c = cl->clients; c; c = c->next) {
+		if(ISVISIBLE(c, m) && c->mon==m)
+			vis++;
 		if(!c->scratch) {
 			occ |= c->tags;
 			if(c->isurgent)
@@ -876,6 +881,7 @@ drawbar(Monitor *m) {
 	drw_text(drw, x, 0, w, bh, m->ltsymbol, 0);
 	x += w;
 	xx = x;
+	m->titlebarbegin = x;
 	if(showsystray && m == systraytomon(m)) {
 		stw = getsystraywidth();
 	}
@@ -893,18 +899,72 @@ drawbar(Monitor *m) {
 	}
 	else
 		x = m->ww - stw;
-	if((w = x - xx) > bh) {
-		x = xx;
-		if(m->sel) {
-			drw_setscheme(drw, m == selmon ? &scheme[SchemeSel] : &scheme[SchemeNorm]);
-			drw_text(drw, x, 0, w, bh, m->sel->name, 0);
-			drw_rect(drw, x, 0, w, bh, m->sel->isfixed, m->sel->isfloating, 0);
-		}
-		else {
-			drw_setscheme(drw, &scheme[SchemeNorm]);
-			drw_text(drw, x, 0, w, bh, NULL, 0);
-		}
+	m->titlebarend = x;
+
+	for(c = cl->clients; c && c->mon==m && !ISVISIBLE(c, m); c = c->next);
+	firstvis = c;
+
+	// col = m == selmon ? dc.sel : dc.norm;
+	w = x - xx;
+	x = xx;
+
+	if(vis > 0) {
+		mw = w / vis;
+		extra = 0;
+		//seldc = dc;
+
+		i = 0;
+		while(c) {
+			lastvis = c;
+			tw = TEXTW(c->name);
+			if(tw < mw) extra += (mw - tw); else i++;
+			for(c = c->next; c && c->mon == m && !ISVISIBLE(c, m); c = c->next);
+ 		}
+
+		if(i > 0) mw += extra / i;
+
+		c = firstvis;
+		//xx = x;
 	}
+	m->titlebarbegin = x;
+	while(w > bh) {
+		if(c) {
+			ow = w;
+			tw = TEXTW(c->name);
+			w = MIN(ow, tw);
+
+			if(w > mw) w = mw;
+			// if(m->sel == c) seldc = dc;
+			if(c == lastvis) w = ow;
+
+			drw_text(drw, x, 0, w, bh, c->name, 0);
+			// drawtext(c->name, col, False);
+			// if(c != firstvis) drawvline(col);
+			drw_rect(drw, x, 0, w, bh, c->isfixed, c->isfloating, 0);
+			// drawsquare(c->isfixed, c->isfloating, False, col);
+
+			x += w;
+			w = ow - w;
+			for(c = c->next; c && c->mon != m && !ISVISIBLE(c, m); c = c->next);
+		} else {
+			drw_text(drw, x, 0, w, bh, NULL, 0);
+ 			// drawtext(NULL, dc.norm, False);
+			break;
+ 		}
+ 	}
+
+	// if((w = x - xx) > bh) {
+	// 	x = xx;
+	// 	if(m->sel) {
+	// 		drw_setscheme(drw, m == selmon ? &scheme[SchemeSel] : &scheme[SchemeNorm]);
+	// 		drw_text(drw, x, 0, w, bh, m->sel->name, 0);
+	// 		drw_rect(drw, x, 0, w, bh, m->sel->isfixed, m->sel->isfloating, 0);
+	// 	}
+	// 	else {
+	// 		drw_setscheme(drw, &scheme[SchemeNorm]);
+	// 		drw_text(drw, x, 0, w, bh, NULL, 0);
+	// 	}
+	// }
 	drw_map(drw, m->barwin, 0, 0, m->ww, bh);
 }
 
@@ -994,6 +1054,50 @@ focusmon(const Arg *arg) {
 					in gedit and anjuta */
 	selmon = m;
 	focus(NULL);
+}
+
+void
+focusonclick(const Arg *arg) {
+	int x, w, mw = 0, tw, n = 0, i = 0, extra = 0;
+	Monitor *m = selmon;
+	Client *c, *firstvis;
+
+	for(c = cl->clients; c && c->mon==selmon && !ISVISIBLE(c, c->mon); c = c->next);
+	firstvis = c;
+	
+	for(c = cl->clients; c; c = c->next)
+		if(ISVISIBLE(c, c->mon) && c->mon == selmon)
+		    n++;
+	
+	if(n > 0) {
+		mw = (m->titlebarend - m->titlebarbegin) / n;
+		c = firstvis;
+		while(c) {
+			tw = TEXTW(c->name);
+			if(tw < mw) extra += (mw - tw); else i++;
+			for(c = c->next; c && c->mon == m && !ISVISIBLE(c, m); c = c->next);
+ 		}
+		if(i > 0) mw += extra / i;
+	}
+
+	x = m->titlebarbegin;
+
+	c = firstvis;
+    while(x < m->titlebarend) {
+		if(c) {
+			w = MIN(TEXTW(c->name), mw);
+			if(x < arg->i && x+w > arg->i) {
+				focus(c);
+				restack(selmon);
+				break;
+			} else
+			x += w;
+
+			for(c = c->next; c && c->mon == selmon && !ISVISIBLE(c, c->mon); c = c->next);
+		} else {
+			break;
+		}
+    }
 }
 
 void
