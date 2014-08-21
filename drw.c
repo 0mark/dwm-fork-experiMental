@@ -155,6 +155,14 @@ drw_rect2(Drw *drw, int x, int y, unsigned int w, unsigned int h, int filled, in
 }
 
 void
+drw_vline(Drw *drw, int x, int y, /*unsigned int w,*/ unsigned int h, /*int filled, int empty,*/ int invert) {
+	if(!drw || !drw->font || !drw->scheme)
+		return;
+	XSetForeground(drw->dpy, drw->gc, invert ? drw->scheme->bg->rgb : drw->scheme->fg->rgb);
+	XDrawLine(drw->dpy, drw->drawable, drw->gc, x, y, x, y + h);
+}
+
+void
 drw_textn(Drw *drw, int x, int y, unsigned int w, unsigned int h, const char *text, int olen, int invert, Bool center) {
 	char buf[256];
 	int i, tx, ty, th, len;
