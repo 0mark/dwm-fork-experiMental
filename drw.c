@@ -158,7 +158,7 @@ void
 drw_vline(Drw *drw, int x, int y, /*unsigned int w,*/ unsigned int h, /*int filled, int empty,*/ int invert) {
 	if(!drw || !drw->font || !drw->scheme)
 		return;
-	XSetForeground(drw->dpy, drw->gc, invert ? drw->scheme->bg->rgb : drw->scheme->fg->rgb);
+	XSetForeground(drw->dpy, drw->gc, invert==0 ? drw->scheme->bg->rgb : (invert<0 ? drw->scheme->border->rgb : drw->scheme->fg->rgb));
 	XDrawLine(drw->dpy, drw->drawable, drw->gc, x, y, x, y + h);
 }
 

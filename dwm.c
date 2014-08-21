@@ -857,10 +857,16 @@ drawbar(Monitor *m) {
 	unsigned int i, occ = 0, urg = 0, vis = 0, ow, tw;
 	Client *c, *firstvis, *lastvis;
 	barItem *item;
+	ClrScheme cs;
+
+	if(monobar) {
+		cs.bg = scheme[SchemeNorm].bg;
+		cs.fg = scheme[SchemeNorm].border;
+	}
 
 	resizebarwin(m);
 	for(c = cl->clients; c; c = c->next) {
-		if(ISVISIBLE(c, m) /*&& c->mon==m*/)
+		if(ISVISIBLE(c, m))
 			vis++;
 		if(!c->scratch) {
 			occ |= c->tags;
@@ -888,38 +894,35 @@ drawbar(Monitor *m) {
 	if(m == selmon) { /* status is only drawn on selected monitor */
 		item = calloc(sizeof(barItem), 1);
 		w = drw_fancytext_prepare(drw, bitmaps, stext, item);
-		//w = TEXTW(stext);
 		x = m->ww - (w + stw);
 		if(x < xx) {
 			x = xx;
 			w = m->ww - xx;
 		}
 		drw_fancytext(drw, x, 0, w, bh, item);
-		//drw_text(drw, x, 0, w, bh, stext, 0);
 	}
 	else
 		x = m->ww - stw;
 	m->titlebarend = x;
 
-	for(c = cl->clients; c && /*c->mon==m &&*/ !ISVISIBLE(c, m); c = c->next);
+	for(c = cl->clients; c && !ISVISIBLE(c, m); c = c->next);
 	firstvis = c;
 
-	// col = m == selmon ? dc.sel : dc.norm;
-	drw_setscheme(drw, (m == selmon /*&& !monobar*/) ? &scheme[SchemeSel] : &scheme[SchemeNorm]);
+	if(!monobar)
+		drw_setscheme(drw, m == selmon ? &scheme[SchemeSel] : &scheme[SchemeNorm]);
 	w = x - xx;
 	x = xx;
 
 	if(vis > 0) {
 		mw = w / vis;
 		extra = 0;
-		//seldc = dc;
 
 		i = 0;
 		while(c) {
 			lastvis = c;
 			tw = TEXTW(c->name);
 			if(tw < mw) extra += (mw - tw); else i++;
-			for(c = c->next; c && /*c->mon == m &&*/ !ISVISIBLE(c, m); c = c->next);
+			for(c = c->next; c && !ISVISIBLE(c, m); c = c->next);
  		}
 
 		if(i > 0) mw += extra / i;
@@ -936,33 +939,26 @@ drawbar(Monitor *m) {
 			if(w > mw) w = mw;
 			if(c == lastvis) w = ow;
 
-			drw_text(drw, x, 0, w, bh, c->name, c==m->sel);
-			if(c != firstvis) drw_vline(drw, x, 0, bh, False);
-			drw_rect(drw, x, 0, w, bh, c->isfixed, c->isfloating, 0);
-			// drawsquare(c->isfixed, c->isfloating, False, col);
+			if(monobar) {
+				drw_setscheme(drw, m == selmon ? (c==m->sel ? &scheme[SchemeSel] : &scheme[SchemeNorm]) : (c==m->sel ? &scheme[SchemeNorm] : &cs));
+				drw_text(drw, x, 0, w, bh, c->name, False);
+				drw_rect(drw, x, 0, w, bh, c->isfixed, c->isfloating, 0);
+				drw_setscheme(drw, &scheme[SchemeNorm]);
+				if(c != firstvis) drw_vline(drw, x, 0, bh, -1);
+			} else {
+				drw_text(drw, x, 0, w, bh, c->name, c==m->sel);
+				drw_rect(drw, x, 0, w, bh, c->isfixed, c->isfloating, 0);
+				if(c != firstvis) drw_vline(drw, x, 0, bh, False);
+			}
 
 			x += w;
 			w = ow - w;
 			for(c = c->next; c && c->mon != m && !ISVISIBLE(c, m); c = c->next);
 		} else {
 			drw_text(drw, x, 0, w, bh, NULL, 0);
- 			// drawtext(NULL, dc.norm, False);
 			break;
  		}
  	}
-
-	// if((w = x - xx) > bh) {
-	// 	x = xx;
-	// 	if(m->sel) {
-	// 		drw_setscheme(drw, m == selmon ? &scheme[SchemeSel] : &scheme[SchemeNorm]);
-	// 		drw_text(drw, x, 0, w, bh, m->sel->name, 0);
-	// 		drw_rect(drw, x, 0, w, bh, m->sel->isfixed, m->sel->isfloating, 0);
-	// 	}
-	// 	else {
-	// 		drw_setscheme(drw, &scheme[SchemeNorm]);
-	// 		drw_text(drw, x, 0, w, bh, NULL, 0);
-	// 	}
-	// }
 	drw_map(drw, m->barwin, 0, 0, m->ww, bh);
 }
 

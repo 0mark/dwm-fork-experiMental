@@ -2,18 +2,25 @@
 
 /* appearance */
 static const char font[]            = "-*-terminus-*-*-*-*-12-*-*-*-*-*-*-*";
-static const char normbordercolor[] = "#444444";
-static const char normbgcolor[]     = "#222222";
-static const char normfgcolor[]     = "#bbbbbb";
-static const char selbordercolor[]  = "#005577";
-static const char selbgcolor[]      = "#005577";
-static const char selfgcolor[]      = "#eeeeee";
+// static const char normbordercolor[] = "#444444";
+// static const char normbgcolor[]     = "#222222";
+// static const char normfgcolor[]     = "#bbbbbb";
+// static const char selbordercolor[]  = "#005577";
+// static const char selbgcolor[]      = "#005577";
+// static const char selfgcolor[]      = "#eeeeee";
+static const char normbordercolor[] = "#777777";
+static const char normbgcolor[]     = "#161616";
+static const char normfgcolor[]     = "#ffffff";
+static const char selbordercolor[]  = "#276CC2";
+static const char selbgcolor[]      = "#222222";
+static const char selfgcolor[]      = "#276CC2";
 static const unsigned int borderpx  = 1;        /* border pixel of windows */
 static const unsigned int snap      = 32;       /* snap pixel */
 static const unsigned int systraypinning = 0;   /* 0: sloppy systray follows selected monitor, >0: pin systray to monitor X */
 static const unsigned int systrayspacing = 2;   /* systray spacing */
 static const Bool systraypinningfailfirst = True;   /* True: if pinning fails, display systray on the first monitor, False: display systray on the last monitor*/
 static const Bool showsystray       = True;     /* False means no systray */
+static const Bool monobar           = True;
 
 static const Rule rules[] = {
 	/* class            instance               title         tags mask     isfloating   monitor   scratch? */
