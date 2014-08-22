@@ -860,7 +860,7 @@ drawbar(Monitor *m) {
 
 	resizebarwin(m);
 	for(c = cl->clients; c; c = c->next) {
-		if(ISVISIBLE(c, m) && c->mon==m)
+		if(ISVISIBLE(c, m) /*&& c->mon==m*/)
 			vis++;
 		if(!c->scratch) {
 			occ |= c->tags;
@@ -901,7 +901,7 @@ drawbar(Monitor *m) {
 		x = m->ww - stw;
 	m->titlebarend = x;
 
-	for(c = cl->clients; c && c->mon==m && !ISVISIBLE(c, m); c = c->next);
+	for(c = cl->clients; c && /*c->mon==m &&*/ !ISVISIBLE(c, m); c = c->next);
 	firstvis = c;
 
 	// col = m == selmon ? dc.sel : dc.norm;
@@ -919,7 +919,7 @@ drawbar(Monitor *m) {
 			lastvis = c;
 			tw = TEXTW(c->name);
 			if(tw < mw) extra += (mw - tw); else i++;
-			for(c = c->next; c && c->mon == m && !ISVISIBLE(c, m); c = c->next);
+			for(c = c->next; c && /*c->mon == m &&*/ !ISVISIBLE(c, m); c = c->next);
  		}
 
 		if(i > 0) mw += extra / i;
@@ -935,7 +935,6 @@ drawbar(Monitor *m) {
 
 			if(w > mw) w = mw;
 			if(c == lastvis) w = ow;
-printf("%p, %p\n", (void *)c, (void *)m->sel);
 			drw_text(drw, x, 0, w, bh, c->name, c==m->sel);
 			if(c != firstvis) drw_vline(drw, x, 0, bh, False);
 			drw_rect(drw, x, 0, w, bh, c->isfixed, c->isfloating, 0);
