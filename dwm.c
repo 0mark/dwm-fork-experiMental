@@ -905,6 +905,7 @@ drawbar(Monitor *m) {
 	firstvis = c;
 
 	// col = m == selmon ? dc.sel : dc.norm;
+	drw_setscheme(drw, (m == selmon /*&& !monobar*/) ? &scheme[SchemeSel] : &scheme[SchemeNorm]);
 	w = x - xx;
 	x = xx;
 
@@ -924,7 +925,6 @@ drawbar(Monitor *m) {
 		if(i > 0) mw += extra / i;
 
 		c = firstvis;
-		//xx = x;
 	}
 	m->titlebarbegin = x;
 	while(w > bh) {
@@ -934,12 +934,10 @@ drawbar(Monitor *m) {
 			w = MIN(ow, tw);
 
 			if(w > mw) w = mw;
-			// if(m->sel == c) seldc = dc;
 			if(c == lastvis) w = ow;
-
-			drw_text(drw, x, 0, w, bh, c->name, 0);
-			// drawtext(c->name, col, False);
-			// if(c != firstvis) drawvline(col);
+printf("%p, %p\n", (void *)c, (void *)m->sel);
+			drw_text(drw, x, 0, w, bh, c->name, c==m->sel);
+			if(c != firstvis) drw_vline(drw, x, 0, bh, False);
 			drw_rect(drw, x, 0, w, bh, c->isfixed, c->isfloating, 0);
 			// drawsquare(c->isfixed, c->isfloating, False, col);
 
