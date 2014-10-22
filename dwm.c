@@ -947,8 +947,8 @@ drawbar(Monitor *m) {
 				if(c != firstvis) drw_vline(drw, x, 0, bh, -1);
 			} else {
 				drw_text(drw, x, 0, w, bh, c->name, c==m->sel);
-				drw_rect(drw, x, 0, w, bh, c->isfixed, c->isfloating, 0);
 				if(c != firstvis) drw_vline(drw, x, 0, bh, False);
+				drw_rect(drw, x, 0, w, bh, c->isfixed, c->isfloating, 0);
 			}
 
 			x += w;
