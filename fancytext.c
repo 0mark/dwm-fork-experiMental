@@ -1,3 +1,6 @@
+// https://ghc.haskell.org/trac/ghc/ticket/9185
+#define _DEFAULT_SOURCE 1
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,11 +31,11 @@ void drw_bargraph(Drw *drw, int x, int y, unsigned int w, unsigned int h, Bool h
 	n = range * v;
 
 	if(horizontal) {
-		drw_rect2(drw, x,     y, n,         h, True, False, False);
-		drw_rect2(drw, x + n, y, range - n, h, True, False, True);
+		drw_rect(drw, x,     y, n,         h, True, False);
+		drw_rect(drw, x + n, y, range - n, h, True, True);
 	} else/*vertical*/ {
-		drw_rect2(drw, x, y,         w, range - n,         True, False, True);
-		drw_rect2(drw, x, y + h - n, w, h - range - n, True, False, False);
+		drw_rect(drw, x, y,         w, range - n,     True, True);
+		drw_rect(drw, x, y + h - n, w, h - range - n, True, False);
 	}
 
 	drw->scheme->border = drw->scheme->bg;

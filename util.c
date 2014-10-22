@@ -1,3 +1,6 @@
+// https://ghc.haskell.org/trac/ghc/ticket/9185
+#define _DEFAULT_SOURCE 1
+
 /* See LICENSE file for copyright and license details. */
 #include <stdarg.h>
 #include <stdio.h>

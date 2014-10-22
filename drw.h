@@ -62,8 +62,8 @@ void drw_setfont(Drw *drw, Fnt *font);
 void drw_setscheme(Drw *drw, ClrScheme *scheme);
 
 /* Drawing functions */
-void drw_rect(Drw *drw, int x, int y, unsigned int w, unsigned int h, int filled, int empty, int invert);
-void drw_rect2(Drw *drw, int x, int y, unsigned int w, unsigned int h, int filled, int empty, int invert);
+void drw_mark(Drw *drw, int x, int y, unsigned int w, unsigned int h, int filled, int empty, int invert);
+void drw_rect(Drw *drw, int x, int y, unsigned int w, unsigned int h, int filled, int invert);
 void drw_vline(Drw *drw, int x, int y, /*unsigned int w,*/ unsigned int h, /*int filled, int empty,*/ int invert);
 void drw_textn(Drw *drw, int x, int y, unsigned int w, unsigned int h, const char *text, int olen, int invert, Bool center);
 void drw_text(Drw *drw, int x, int y, unsigned int w, unsigned int h, const char *text, int invert);

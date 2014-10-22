@@ -1,3 +1,6 @@
+ // https://ghc.haskell.org/trac/ghc/ticket/9185
+#define _DEFAULT_SOURCE 1
+
 /* See LICENSE file for copyright and license details.
  *
  * dynamic window manager is designed like any other X client as well. It is
@@ -60,8 +63,10 @@
 #define SELLT(X)                             (cl->pertag->sellts[X->curtag])
 #define LT(X)                                (cl->pertag->ltidxs[X->curtag][cl->pertag->sellts[X->curtag]])
 #define XALLOC(target, type, size)           if((target = calloc(sizeof(type), size)) == NULL) die("fatal: could not malloc() %u bytes (target)\n", size*sizeof(type))
+
 #define SYSTEM_TRAY_REQUEST_DOCK             0
 #define _NET_SYSTEM_TRAY_ORIENTATION_HORZ    0
+
 
 /* XEMBED messages */
 #define XEMBED_EMBEDDED_NOTIFY               0
@@ -879,7 +884,7 @@ drawbar(Monitor *m) {
 		w = TEXTW(cl->pertag->names[i]);
 		drw_setscheme(drw, m->tagset[m->seltags] & 1 << i ? &scheme[SchemeSel] : &scheme[SchemeNorm]);
 		drw_text(drw, x, 0, w, bh, cl->pertag->names[i], urg & 1 << i);
-		drw_rect(drw, x, 0, w, bh, m == selmon && selmon->sel && !selmon->sel->scratch && selmon->sel->tags & 1 << i, occ & 1 << i, urg & 1 << i);
+		drw_mark(drw, x, 0, w, bh, m == selmon && selmon->sel && !selmon->sel->scratch && selmon->sel->tags & 1 << i, occ & 1 << i, urg & 1 << i);
 		x += w;
 	}
 	w = blw = TEXTW(m->ltsymbol);
@@ -942,13 +947,13 @@ drawbar(Monitor *m) {
 			if(monobar) {
 				drw_setscheme(drw, m == selmon ? (c==m->sel ? &scheme[SchemeSel] : &scheme[SchemeNorm]) : (c==m->sel ? &scheme[SchemeNorm] : &cs));
 				drw_text(drw, x, 0, w, bh, c->name, False);
-				drw_rect(drw, x, 0, w, bh, c->isfixed, c->isfloating, 0);
+				drw_mark(drw, x, 0, w, bh, c->isfixed, c->isfloating, 0);
 				drw_setscheme(drw, &scheme[SchemeNorm]);
 				if(c != firstvis) drw_vline(drw, x, 0, bh, -1);
 			} else {
 				drw_text(drw, x, 0, w, bh, c->name, c==m->sel);
 				if(c != firstvis) drw_vline(drw, x, 0, bh, False);
-				drw_rect(drw, x, 0, w, bh, c->isfixed, c->isfloating, 0);
+				drw_mark(drw, x, 0, w, bh, c->isfixed, c->isfloating, 0);
 			}
 
 			x += w;

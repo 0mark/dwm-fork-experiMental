@@ -1,4 +1,8 @@
+// https://ghc.haskell.org/trac/ghc/ticket/9185
+#define _DEFAULT_SOURCE 1
+
 /* See LICENSE file for copyright and license details. */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -130,27 +134,25 @@ drw_setscheme(Drw *drw, ClrScheme *scheme) {
 }
 
 void
-drw_rect(Drw *drw, int x, int y, unsigned int w, unsigned int h, int filled, int empty, int invert) {
+drw_mark(Drw *drw, int x, int y, unsigned int w, unsigned int h, int filled, int empty, int invert) {
 	int dx;
 
-	if(!drw || !drw->font || !drw->scheme)
+	if(!drw || !drw->font)
 		return;
-	XSetForeground(drw->dpy, drw->gc, invert ? drw->scheme->bg->rgb : drw->scheme->fg->rgb);
-	dx = (drw->font->ascent + drw->font->descent + 2) / 4;
-	if(filled)
-		XFillRectangle(drw->dpy, drw->drawable, drw->gc, x+1, y+1, dx+1, dx+1);
-	else if(empty)
-		XDrawRectangle(drw->dpy, drw->drawable, drw->gc, x+1, y+1, dx, dx);
+	dx = (drw->font->ascent + drw->font->descent + 2) / 4 + (filled ? 1 : 0);
+
+	if(filled || empty)
+		drw_rect(drw, x + 1, y + 1, dx, dx, filled, invert);
 }
 
 void
-drw_rect2(Drw *drw, int x, int y, unsigned int w, unsigned int h, int filled, int empty, int invert) {
+drw_rect(Drw *drw, int x, int y, unsigned int w, unsigned int h, int filled, int invert) {
 	if(!drw || !drw->font || !drw->scheme)
 		return;
 	XSetForeground(drw->dpy, drw->gc, invert ? drw->scheme->bg->rgb : drw->scheme->fg->rgb);
 	if(filled)
 		XFillRectangle(drw->dpy, drw->drawable, drw->gc, x, y, w, h);
-	else if(empty)
+	else
 		XDrawRectangle(drw->dpy, drw->drawable, drw->gc, x, y, w, h);
 }
 
