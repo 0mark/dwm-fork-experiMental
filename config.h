@@ -2,18 +2,23 @@
 
 /* appearance */
 static const char font[]            = "-*-terminus-*-*-*-*-12-*-*-*-*-*-*-*";
-// static const char normbordercolor[] = "#444444";
-// static const char normbgcolor[]     = "#222222";
-// static const char normfgcolor[]     = "#bbbbbb";
-// static const char selbordercolor[]  = "#005577";
-// static const char selbgcolor[]      = "#005577";
-// static const char selfgcolor[]      = "#eeeeee";
 static const char normbordercolor[] = "#777777";
 static const char normbgcolor[]     = "#161616";
 static const char normfgcolor[]     = "#ffffff";
 static const char selbordercolor[]  = "#276CC2";
 static const char selbgcolor[]      = "#222222";
 static const char selfgcolor[]      = "#276CC2";
+static const char* colors[]         = {
+	// border          foreground   background
+	normfgcolor,  // normal
+	"#ff0000",  // error
+	"#276CC2",  // delim
+	"#e0b020",  // artist
+	"#e06000",  // title
+	"#b10000",  // hot
+	"#b15c00",  // medium
+	"#6cb100",  // cool
+};
 static const unsigned int borderpx  = 1;        /* border pixel of windows */
 static const unsigned int snap      = 32;       /* snap pixel */
 static const unsigned int systraypinning = 0;   /* 0: sloppy systray follows selected monitor, >0: pin systray to monitor X */
@@ -25,10 +30,11 @@ static const Bool monobar           = True;
 static const Rule rules[] = {
 	/* class            instance               title         tags mask     isfloating   monitor   scratch? */
 // to tab
+	{ "Dwb",            NULL,                  NULL,         1 << 1,       False,       -1,       False },
 	{ "luakit",         NULL,                  NULL,         1 << 1,       False,       -1,       False },
 	{ "Firefox",        NULL,                  NULL,         1 << 1,       False,       -1,       False },
-	{ "deluge",         NULL,                  NULL,         1 << 8,       False,       -1,       False },
 	{ "Gimp-2.7",       NULL,                  NULL,         1 << 3,       False,       -1,       False },
+	{ "sublime-text",   NULL,                  NULL,         1 << 4,       False,       -1,       False },
 
 // float
 	{ "MPlayer",        NULL,                  NULL,         0,            True,        -1,       False },
@@ -86,7 +92,7 @@ static const TagPreset tags[] = {
 };
 
 /* key definitions */
-#define MODKEY Mod1Mask
+#define MODKEY Mod4Mask
 #define TAGKEYS(KEY,TAG) \
 	{ MODKEY,                       KEY,      view,           {.ui = 1 << TAG} }, \
 	{ MODKEY|ShiftMask,             KEY,      toggleview,     {.ui = 1 << TAG} }, \
@@ -101,7 +107,7 @@ static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() 
 static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", font, "-nb", normbgcolor, "-nf", normfgcolor, "-sb", selbgcolor, "-sf", selfgcolor, NULL };
 static const char *termcmd[]   = { "urxvt", "-fg", "white", "-bg", "black", NULL };
 static const char *keycmd[]    = { "xbindkeys", NULL };
-//static const char *urgentcmd[] = { "thinkalert", "2", NULL };
+static const char *urgentcmd[] = { "thinkalert", "2", NULL };
 
 static Key keys[] = {
 	/* modifier                     key         function        argument */

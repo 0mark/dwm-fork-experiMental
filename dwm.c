@@ -53,7 +53,7 @@
 #define CLEANMASK(mask)                      (mask & ~(numlockmask|LockMask) & (ShiftMask|ControlMask|Mod1Mask|Mod2Mask|Mod3Mask|Mod4Mask|Mod5Mask))
 #define INTERSECT(x,y,w,h,m)                 (MAX(0, MIN((x)+(w),(m)->wx+(m)->ww) - MAX((x),(m)->wx)) \
                                               * MAX(0, MIN((y)+(h),(m)->wy+(m)->wh) - MAX((y),(m)->wy)))
-#define ISVISIBLE(C, M)                      ((C->tags & M->tagset[M->seltags]))
+#define ISVISIBLE(C, M)                      ((C->tags & M->tagset[M->seltags]) && C->mon==M)
 #define LENGTH(X)                            (sizeof X / sizeof X[0])
 #define MOUSEMASK                            (BUTTONMASK|PointerMotionMask)
 #define WIDTH(X)                             ((X)->w + 2 * (X)->bw)
@@ -61,7 +61,7 @@
 #define TAGMASK                              ((1 << LENGTH(tags)) - 1)
 #define TEXTW(X)                             (drw_font_getexts_width(drw->font, X, strlen(X)) + drw->font->h)
 #define SELLT(X)                             (cl->pertag->sellts[X->curtag])
-#define LT(X)                                (cl->pertag->ltidxs[X->curtag][cl->pertag->sellts[X->curtag]])
+#define LT(X)                                (cl->pertag->ltidxs[X->curtag-1][cl->pertag->sellts[X->curtag]])
 #define XALLOC(target, type, size)           if((target = calloc(sizeof(type), size)) == NULL) die("fatal: could not malloc() %u bytes (target)\n", size*sizeof(type))
 
 #define SYSTEM_TRAY_REQUEST_DOCK             0
@@ -958,7 +958,7 @@ drawbar(Monitor *m) {
 
 			x += w;
 			w = ow - w;
-			for(c = c->next; c && c->mon != m && !ISVISIBLE(c, m); c = c->next);
+			for(c = c->next; c && !ISVISIBLE(c, m); c = c->next);
 		} else {
 			drw_text(drw, x, 0, w, bh, NULL, 0);
 			break;
@@ -1845,7 +1845,7 @@ setlayout(const Arg *arg) {
 		cl->pertag->sellts[selmon->curtag] ^= 1;
 	}
 	if(arg && arg->v) {
-		memcpy(cl->pertag->ltidxs[selmon->curtag][SELLT(selmon)], (Layout *)arg->v, sizeof(Layout));
+		memcpy(cl->pertag->ltidxs[selmon->curtag-1][SELLT(selmon)], (Layout *)arg->v, sizeof(Layout));
 	}
 	strncpy(selmon->ltsymbol, LT(selmon)->symbol, sizeof selmon->ltsymbol);
 	if(selmon->sel)
@@ -1888,8 +1888,10 @@ setup(void) {
 		die("fatal: could not malloc() %u bytes\n", LENGTH(tags) * sizeof(Layout**));
 	if(!(cl->pertag->sellts = (unsigned int *)calloc(LENGTH(tags), sizeof(unsigned int))))
 		die("fatal: could not malloc() %u bytes\n", LENGTH(tags) * sizeof(unsigned int));
+	printf("--%d\n", LENGTH(tags));
 	for(i=0; i < LENGTH(tags); i++) {
 		/* init layouts */
+		printf("%s, %d, %d\n", tags[i].name, tags[i].ltidxs[0], tags[i].ltidxs[0]);
 		XALLOC(cl->pertag->ltidxs[i], Layout **, 2);
 		XALLOC(cl->pertag->ltidxs[i][0], Layout, 1);
 		XALLOC(cl->pertag->ltidxs[i][1], Layout, 1);
@@ -2188,9 +2190,10 @@ toggle_scratch(const Arg *arg) {
 	attach(s);
 	attachstack(s);
 	setclientstate(s, NormalState);
-	arrange(NULL);
+	arrange(selmon);
 	XMapWindow(dpy, s->win);
-	focus(NULL);
+	focus(s);
+	restack(selmon);
 
 	// mark visible scratch
 	isscratched = arg->i;
@@ -2241,7 +2244,7 @@ toggleview(const Arg *arg) {
 		attachclients(selmon);
 
 		/* apply settings for this view */
-		if (LT(selmon)->showbar != cl->pertag->ltidxs[selmon->curtag][cl->pertag->sellts[selmon->prevtag]]->showbar)
+		if (LT(selmon)->showbar != cl->pertag->ltidxs[selmon->curtag-1][cl->pertag->sellts[selmon->prevtag]]->showbar)
 			togglebar(NULL);
 		focus(NULL);
 		arrange(selmon);
@@ -2721,7 +2724,7 @@ view(const Arg *arg) {
 		selmon->curtag = tmptag;
 	}
 
-	if (LT(selmon)->showbar != cl->pertag->ltidxs[selmon->curtag][cl->pertag->sellts[selmon->prevtag]]->showbar)
+	if (LT(selmon)->showbar != cl->pertag->ltidxs[selmon->curtag-1][cl->pertag->sellts[selmon->prevtag]]->showbar)
 		togglebar(NULL);
 	attachclients(selmon);
 	focus(NULL);
