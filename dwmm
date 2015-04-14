@@ -1,0 +1,27 @@
+#!/bin/sh
+
+cfgfile="${XDG_CONFIG_HOME:-$HOME/.config}/dwm/config.h"
+
+if [ -f $cfgfile ]; then
+	dwmbin="${XDG_DATA_HOME:-$HOME/.local/share}/dwm/dwm"
+	if [ $cfgfile -nt $dwmbin -o ! -f $dwmbin ]; then
+		makedir="/tmp/dwm$$"
+    	mkdir $makedir
+		cp -R "DWMSRC"* $makedir
+		cp $cfgfile $makedir
+		cd $makedir
+		make
+		R=$?
+		if [ $R -gt 0 ] && [ $R -le 127 ]; then
+			dwmbin=`which dwm`
+		else
+			mkdir -p "${XDG_DATA_HOME:-$HOME/.local/share}/dwm"
+			cp dwm $dwmbin
+		fi
+		#rm -Rf $makedir
+	fi
+else
+	dwmbin=`which dwm`
+fi
+
+exec $dwmbin >> ~/.local/share/dwm/log 2>&1

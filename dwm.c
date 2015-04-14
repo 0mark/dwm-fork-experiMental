@@ -60,7 +60,7 @@
 #define TAGMASK                              ((1 << LENGTH(tags)) - 1)
 #define TEXTW(X)                             (drw_font_getexts_width(drw->font, X, strlen(X)) + drw->font->h)
 #define SELLT(X)                             (cl->pertag->sellts[X->curtag])
-#define LT(X)                                (cl->pertag->ltidxs[X->curtag][cl->pertag->sellts[X->curtag]])
+#define LT(X)                                (cl->pertag->ltidxs[X->curtag-1][cl->pertag->sellts[X->curtag]])
 #define XALLOC(target, type, size)           if((target = calloc(sizeof(type), size)) == NULL) die("fatal: could not malloc() %u bytes (target)\n", size*sizeof(type))
 
 #define SYSTEM_TRAY_REQUEST_DOCK             0
@@ -1844,7 +1844,7 @@ setlayout(const Arg *arg) {
 		cl->pertag->sellts[selmon->curtag] ^= 1;
 	}
 	if(arg && arg->v) {
-		memcpy(cl->pertag->ltidxs[selmon->curtag][SELLT(selmon)], (Layout *)arg->v, sizeof(Layout));
+		memcpy(cl->pertag->ltidxs[selmon->curtag-1][SELLT(selmon)], (Layout *)arg->v, sizeof(Layout));
 	}
 	strncpy(selmon->ltsymbol, LT(selmon)->symbol, sizeof selmon->ltsymbol);
 	if(selmon->sel)
@@ -2245,7 +2245,7 @@ toggleview(const Arg *arg) {
 		attachclients(selmon);
 
 		/* apply settings for this view */
-		if (LT(selmon)->showbar != cl->pertag->ltidxs[selmon->curtag][cl->pertag->sellts[selmon->prevtag]]->showbar)
+		if (LT(selmon)->showbar != cl->pertag->ltidxs[selmon->curtag-1][cl->pertag->sellts[selmon->prevtag]]->showbar)
 			togglebar(NULL);
 		focus(NULL);
 		arrange(selmon);
@@ -2725,7 +2725,7 @@ view(const Arg *arg) {
 		selmon->curtag = tmptag;
 	}
 
-	if (LT(selmon)->showbar != cl->pertag->ltidxs[selmon->curtag][cl->pertag->sellts[selmon->prevtag]]->showbar)
+	if (LT(selmon)->showbar != cl->pertag->ltidxs[selmon->curtag-1][cl->pertag->sellts[selmon->prevtag]]->showbar)
 		togglebar(NULL);
 	attachclients(selmon);
 	focus(NULL);
