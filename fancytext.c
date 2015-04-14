@@ -197,7 +197,7 @@ int drw_fancytext_prepare(Drw *drw, BitmapSet *bitmaps, char *text, barItem *ite
 					case 'i':
 						item->func = &ft_add_bitmap;
 						i = atoi(ptr + 1);
-						if(i>bitmaps->len) i = 0;
+						if(i>bitmaps->len-1) i = 0;
 						//if(i>=0 && i<bitmaps->len) {
 							item->data[0].b = bitmaps->items[i];
 							w += item->w = bitmaps->items[i]->w + fh/6;
@@ -211,7 +211,7 @@ int drw_fancytext_prepare(Drw *drw, BitmapSet *bitmaps, char *text, barItem *ite
 						if(len>3 && i<len) {
 							ptr[i] = '\0';
 							n = atoi(ptr+1);
-							if(n>=bitmaps->len) n = 0;
+							if(n>=bitmaps->len-1) n = 0;
 							//if(n>0 && n<bitmaps->len) {
 								item->data[0].b = bitmaps->items[n];
 								w += item->w = bitmaps->items[n]->w + fh/6;

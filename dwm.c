@@ -1,4 +1,3 @@
- // https://ghc.haskell.org/trac/ghc/ticket/9185
 #define _DEFAULT_SOURCE 1
 
 /* See LICENSE file for copyright and license details.
@@ -53,7 +52,7 @@
 #define CLEANMASK(mask)                      (mask & ~(numlockmask|LockMask) & (ShiftMask|ControlMask|Mod1Mask|Mod2Mask|Mod3Mask|Mod4Mask|Mod5Mask))
 #define INTERSECT(x,y,w,h,m)                 (MAX(0, MIN((x)+(w),(m)->wx+(m)->ww) - MAX((x),(m)->wx)) \
                                               * MAX(0, MIN((y)+(h),(m)->wy+(m)->wh) - MAX((y),(m)->wy)))
-#define ISVISIBLE(C, M)                      ((C->tags & M->tagset[M->seltags]))
+#define ISVISIBLE(C, M)                      ((C->tags & M->tagset[M->seltags]) && C->mon==M)
 #define LENGTH(X)                            (sizeof X / sizeof X[0])
 #define MOUSEMASK                            (BUTTONMASK|PointerMotionMask)
 #define WIDTH(X)                             ((X)->w + 2 * (X)->bw)
@@ -958,7 +957,7 @@ drawbar(Monitor *m) {
 
 			x += w;
 			w = ow - w;
-			for(c = c->next; c && c->mon != m && !ISVISIBLE(c, m); c = c->next);
+			for(c = c->next; c && !ISVISIBLE(c, m); c = c->next);
 		} else {
 			drw_text(drw, x, 0, w, bh, NULL, 0);
 			break;
@@ -1882,22 +1881,26 @@ setup(void) {
 		die("fatal: could not malloc() %u bytes\n", sizeof(Clientlist));
 	if(!(cl->pertag = (Pertag *)calloc(1, sizeof(Pertag))))
 		die("fatal: could not malloc() %u bytes\n", sizeof(Pertag));
-	if(!(cl->pertag->names = (char **)calloc(LENGTH(tags), sizeof(char *))))
-		die("fatal: could not malloc() %u bytes\n", LENGTH(tags) * sizeof(char *));
-	if(!(cl->pertag->ltidxs = (Layout ***)calloc(LENGTH(tags), sizeof(Layout***))))
-		die("fatal: could not malloc() %u bytes\n", LENGTH(tags) * sizeof(Layout**));
-	if(!(cl->pertag->sellts = (unsigned int *)calloc(LENGTH(tags), sizeof(unsigned int))))
-		die("fatal: could not malloc() %u bytes\n", LENGTH(tags) * sizeof(unsigned int));
-	for(i=0; i < LENGTH(tags); i++) {
+	if(!(cl->pertag->names = (char **)calloc(LENGTH(tags)+1, sizeof(char *))))
+		die("fatal: could not malloc() %u bytes\n", (LENGTH(tags)+1) * sizeof(char *));
+	if(!(cl->pertag->ltidxs = (Layout ***)calloc(LENGTH(tags)+1, sizeof(Layout***))))
+		die("fatal: could not malloc() %u bytes\n", (LENGTH(tags)+1) * sizeof(Layout**));
+	if(!(cl->pertag->sellts = (unsigned int *)calloc(LENGTH(tags)+1, sizeof(unsigned int))))
+		die("fatal: could not malloc() %u bytes\n", (LENGTH(tags)+1) * sizeof(unsigned int));
+	printf("--%d\n", LENGTH(tags));
+	int j;
+	for(i=0; i < LENGTH(tags) + 1; i++) {
 		/* init layouts */
+		j = i < LENGTH(tags) ? i : LENGTH(tags) - 1;
+		printf("%s, %d, %d\n", tags[j].name, tags[j].ltidxs[0], tags[j].ltidxs[0]);
 		XALLOC(cl->pertag->ltidxs[i], Layout **, 2);
 		XALLOC(cl->pertag->ltidxs[i][0], Layout, 1);
 		XALLOC(cl->pertag->ltidxs[i][1], Layout, 1);
-		memcpy(cl->pertag->ltidxs[i][0], &layouts[tags[i].ltidxs[0]], sizeof(Layout));
-		memcpy(cl->pertag->ltidxs[i][1], &layouts[tags[i].ltidxs[1]], sizeof(Layout));
-		XALLOC(cl->pertag->names[i], char, LENGTH(tags[i].name) + 1);
-		strncpy(cl->pertag->names[i], tags[i].name, LENGTH(tags[i].name));
-		cl->pertag->sellts[i] = 0;
+		memcpy(cl->pertag->ltidxs[i][0], &layouts[tags[j].ltidxs[0]], sizeof(Layout));
+		memcpy(cl->pertag->ltidxs[i][1], &layouts[tags[j].ltidxs[1]], sizeof(Layout));
+		XALLOC(cl->pertag->names[i], char, LENGTH(tags[j].name) + 1);
+		strncpy(cl->pertag->names[i], tags[j].name, LENGTH(tags[j].name));
+		cl->pertag->sellts[i+1] = 0;
 	}
 	/* init screen */
 	screen = DefaultScreen(dpy);
@@ -1943,9 +1946,9 @@ setup(void) {
 	updatesystray();
 	/* init bitmaps */
 	XALLOC(bitmaps, sizeof(BitmapSet), 1);
-	for(i = 0; i < LENGTH(allbits)-2; i += (allbits[0]*allbits[1])/8 + 2, c++);
+	for(i = 0; i < LENGTH(allbits); i += (allbits[0]*allbits[1])/8 + 2, c++);
 	XALLOC(bitmaps->items, sizeof(Bitmap*), c);
-	for(i = 0; i < c; i++) {
+	for(i = 0; i <= c; i++) {
 		// TODO: do i need this if?
 		//if(mapptr[0] && mapptr[1] && mapptr[2]) {
 			XALLOC(bitmaps->items[i], sizeof(Bitmap), 1);
@@ -2188,9 +2191,10 @@ toggle_scratch(const Arg *arg) {
 	attach(s);
 	attachstack(s);
 	setclientstate(s, NormalState);
-	arrange(NULL);
+	arrange(selmon);
 	XMapWindow(dpy, s->win);
-	focus(NULL);
+	focus(s);
+	restack(selmon);
 
 	// mark visible scratch
 	isscratched = arg->i;
