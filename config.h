@@ -1,31 +1,31 @@
 /* See LICENSE file for copyright and license details. */
 
 /* appearance */
-static const char font[]            = "-*-terminus-*-*-*-*-12-*-*-*-*-*-*-*";
-static const char normbordercolor[] = "#777777";
-static const char normbgcolor[]     = "#161616";
-static const char normfgcolor[]     = "#ffffff";
-static const char selbordercolor[]  = "#276CC2";
-static const char selbgcolor[]      = "#222222";
-static const char selfgcolor[]      = "#276CC2";
-static const char* colors[]         = {
-	// border          foreground   background
-	normfgcolor,  // normal
-	"#ff0000",  // error
-	"#276CC2",  // delim
-	"#e0b020",  // artist
-	"#e06000",  // title
-	"#b10000",  // hot
-	"#b15c00",  // medium
-	"#6cb100",  // cool
-};
-static const unsigned int borderpx  = 1;        /* border pixel of windows */
-static const unsigned int snap      = 32;       /* snap pixel */
-static const unsigned int systraypinning = 0;   /* 0: sloppy systray follows selected monitor, >0: pin systray to monitor X */
-static const unsigned int systrayspacing = 2;   /* systray spacing */
+static const char font[]                  = "-*-terminus-*-*-*-*-12-*-*-*-*-*-*-*";
+static const char normbordercolor[]       = "#777777";
+static const char normbgcolor[]           = "#161616";
+static const char normfgcolor[]           = "#ffffff";
+static const char selbordercolor[]        = "#276CC2";
+static const char selbgcolor[]            = "#222222";
+static const char selfgcolor[]            = "#276CC2";
+static const unsigned int borderpx        = 1;      /* border pixel of windows */
+static const unsigned int snap            = 32;     /* snap pixel */
+static const unsigned int systraypinning  = 0;      /* 0: sloppy systray follows selected monitor, >0: pin systray to monitor X */
+static const unsigned int systrayspacing  = 2;      /* systray spacing */
 static const Bool systraypinningfailfirst = True;   /* True: if pinning fails, display systray on the first monitor, False: display systray on the last monitor*/
-static const Bool showsystray       = True;     /* False means no systray */
-static const Bool monobar           = True;
+static const Bool showsystray             = True;   /* False means no systray */
+static const Bool monobar                 = True;
+// static const char* colors[]         = {
+// 	// border          foreground   background
+// 	normfgcolor,  // normal
+// 	"#ff0000",  // error
+// 	"#276CC2",  // delim
+// 	"#e0b020",  // artist
+// 	"#e06000",  // title
+// 	"#b10000",  // hot
+// 	"#b15c00",  // medium
+// 	"#6cb100",  // cool
+// };
 
 static const Rule rules[] = {
 	/* class            instance               title         tags mask     isfloating   monitor   scratch? */
@@ -71,11 +71,11 @@ static const Bool resizehints = True; /* True means respect size hints in tiled 
 #include "layouts/nbstack.c"       /* bottom stack (tiling) */
 
 static const Layout layouts[] = {
-	/* symbol     arrange function   mfact   nmaster   showbar   topbar*/
-	{ "[]=",      tile,              0.55,   1,        True,     True },    /* first entry is default */
-	{ "><>",      NULL,              0.55,   1,        True,     True },    /* no layout function means floating behavior */
-	{ "[M]",      monocle,           0.55,   1,        True,     True },
-	{ "[TTT]",    nbstack,           0.7,    1,        True,     True },
+	/* symbol     arrange function   mfact   nmaster   showbar   topbar   addgaps*/
+	{ "[]=",      tile,              0.55,   1,        True,     True,    6 },    /* first entry is default */
+	{ "><>",      NULL,              0.55,   1,        True,     True,    6 },    /* no layout function means floating behavior */
+	{ "[M]",      monocle,           0.55,   1,        True,     True,    0 },
+	{ "[TTT]",    nbstack,           0.7,    1,        True,     True,    6 },
 };
 
 /* naive preload approach */
@@ -107,7 +107,7 @@ static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() 
 static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", font, "-nb", normbgcolor, "-nf", normfgcolor, "-sb", selbgcolor, "-sf", selfgcolor, NULL };
 static const char *termcmd[]   = { "urxvt", "-fg", "white", "-bg", "black", NULL };
 static const char *keycmd[]    = { "xbindkeys", NULL };
-static const char *urgentcmd[] = { "thinkalert", "2", NULL };
+// static const char *urgentcmd[] = { "thinkalert", "2", NULL };
 
 static Key keys[] = {
 	/* modifier                     key         function        argument */
@@ -126,9 +126,9 @@ static Key keys[] = {
 	{ MODKEY,                       XK_Down,    focusstack,     {.i = +1 } },
 	{ MODKEY,                       XK_Up,      focusstack,     {.i = -1 } },
 	{ MODKEY,                       XK_Return,  zoom,           {0} },
-	//{ MODKEY,                       XK_Page_Up, togglemax,      {0} },
-	//{ MODKEY|ControlMask,           XK_Down,    pushdown,       {0} },
-	//{ MODKEY|ControlMask,           XK_Up,      pushup,         {0} },
+	{ MODKEY,                       XK_Page_Up, togglemax,      {0} },
+	{ MODKEY|ControlMask,           XK_Down,    pushdown,       {0} },
+	{ MODKEY|ControlMask,           XK_Up,      pushup,         {0} },
 	/* -- */
 	/* tab */
 	{ MODKEY,                       XK_Tab,     view,           {0} },
@@ -144,7 +144,7 @@ static Key keys[] = {
 	{ MODKEY|ShiftMask,             XK_t,       setlayout,      {.v = &layouts[0]} }, /*tile*/
 	{ MODKEY|ShiftMask,             XK_f,       setlayout,      {.v = &layouts[1]} }, /*float*/
 	{ MODKEY|ShiftMask,             XK_m,       setlayout,      {.v = &layouts[2]} }, /*monocle*/
-	//{ MODKEY|ShiftMask,             XK_b,       setlayout,      {.v = &layouts[3]} }, /*bottomstack*/
+	{ MODKEY|ShiftMask,             XK_b,       setlayout,      {.v = &layouts[3]} }, /*nbstack*/
 	//{ MODKEY|ShiftMask,             XK_g,       setlayout,      {.v = &layouts[4]} }, /*gaplessgrid*/
 	//{ MODKEY|ShiftMask,             XK_r,       setlayout,      {.v = &layouts[5]} }, /*grid*/
 	//{ MODKEY|ShiftMask,             XK_h,       setlayout,      {.v = &layouts[6]} }, /*bstackhoriz*/

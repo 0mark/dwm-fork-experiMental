@@ -140,6 +140,7 @@ typedef struct {
 	int nmaster;
 	Bool showbar;
 	Bool topbar;
+	int gap;
 } Layout;
 
 //typedef struct Pertag Pertag;
@@ -242,7 +243,10 @@ static void motionnotify(XEvent *e);
 static void movemouse(const Arg *arg);
 static Client *nexttiled(Client *c, Monitor *m);
 static void pop(Client *);
+static Client *prevtiled(Client *c, Monitor *m);
 static void propertynotify(XEvent *e);
+static void pushup(const Arg *arg);
+static void pushdown(const Arg *arg);
 static void quit(const Arg *arg);
 static Monitor *recttomon(int x, int y, int w, int h);
 static void removesystrayicon(Client *i);
@@ -271,6 +275,7 @@ static void tagmon(const Arg *arg);
 static void tile(Monitor *);
 static void togglebar(const Arg *arg);
 static void togglefloating(const Arg *arg);
+static void togglemax(const Arg *arg);
 static void toggletag(const Arg *arg);
 static void toggleview(const Arg *arg);
 static void toggle_scratch(const Arg *arg);
@@ -822,7 +827,7 @@ destroynotify(XEvent *e) {
 
 void
 detach(Client *c) {
-	Client **tc;
+	Client **tc; // TODO: why **?
 
 	for(tc = &cl->clients; *tc && *tc != c; tc = &(*tc)->next);
 	*tc = c->next;
@@ -1556,6 +1561,66 @@ propertynotify(XEvent *e) {
 	}
 }
 
+static Client *
+prevtiled(Client *c, Monitor *m) {
+   Client *p, *r;
+
+   for(p = cl->clients, r = NULL; p && p != c; p = p->next)
+       if(!p->isfloating && ISVISIBLE(p, m))
+           r = p;
+   return r;
+}
+
+static void
+pushup(const Arg *arg) {
+	Client *sel = selmon->sel;
+	Client *c;
+
+	if(!sel || sel->isfloating)
+		return;
+	if((c = prevtiled(sel, selmon))) {
+		/* attach before c */
+		detach(sel);
+		sel->next = c;
+		if(cl->clients == c)
+			cl->clients = sel;
+		else {
+			for(c = cl->clients; c->next != sel->next; c = c->next);
+			c->next = sel;
+		}
+		// swap(c, sel);
+	} else {
+		/* move to the end */
+		for(c = sel; c->next; c = c->next);
+		detach(sel);
+		sel->next = NULL;
+		c->next = sel;
+	}
+	focus(sel);
+	arrange(selmon);
+}
+
+static void
+pushdown(const Arg *arg) {
+   Client *sel = selmon->sel;
+   Client *c;
+
+   if(!sel || sel->isfloating)
+       return;
+   if((c = nexttiled(sel->next, selmon))) {
+       /* attach after c */
+       detach(sel);
+       sel->next = c->next;
+       c->next = sel;
+   } else {
+       /* move to the front */
+       detach(sel);
+       attach(sel);
+   }
+   focus(sel);
+   arrange(selmon);
+}
+
 void
 quit(const Arg *arg) {
 	running = False;
@@ -1604,11 +1669,20 @@ void
 resizeclient(Client *c, int x, int y, int w, int h) {
 	XWindowChanges wc;
 
-	c->oldx = c->x; c->x = wc.x = x;
-	c->oldy = c->y; c->y = wc.y = y;
-	c->oldw = c->w; c->w = wc.width = w;
-	c->oldh = c->h; c->h = wc.height = h;
-	wc.border_width = c->bw;
+	unsigned int gap = c->isfloating ? 0 : LT(c->mon)->gap;
+
+	c->oldx = c->x; c->x = wc.x = x + gap;
+	c->oldy = c->y; c->y = wc.y = y + gap;
+	c->oldw = c->w; c->w = wc.width = w - (gap ? (x + w + (c->bw * 2) == c->mon->wx + c->mon->ww ? 2 : 1) * gap : 0);
+	c->oldh = c->h; c->h = wc.height = h - (gap ? (y + h + (c->bw * 2) == c->mon->wy + c->mon->wh ? 2 : 1) * gap : 0);
+
+	wc.border_width = LT(c->mon)->arrange == monocle && !c->isfloating ? 0 : c->bw;
+
+	if(LT(c->mon)->arrange == monocle && !c->isfloating) {
+		c->w = wc.width += c->bw * 2;
+		c->h = wc.height += c->bw * 2;
+	}
+
 	XConfigureWindow(dpy, c->win, CWX|CWY|CWWidth|CWHeight|CWBorderWidth, &wc);
 	configure(c);
 	XSync(dpy, False);
@@ -1888,7 +1962,7 @@ setup(void) {
 		die("fatal: could not malloc() %u bytes\n", LENGTH(tags) * sizeof(Layout**));
 	if(!(cl->pertag->sellts = (unsigned int *)calloc(LENGTH(tags), sizeof(unsigned int))))
 		die("fatal: could not malloc() %u bytes\n", LENGTH(tags) * sizeof(unsigned int));
-	printf("--%d\n", LENGTH(tags));
+	//printf("--%d\n", LENGTH(tags));
 	for(i=0; i < LENGTH(tags); i++) {
 		/* init layouts */
 		printf("%s, %d, %d\n", tags[i].name, tags[i].ltidxs[0], tags[i].ltidxs[0]);
@@ -2116,6 +2190,18 @@ togglefloating(const Arg *arg) {
 		resize(selmon->sel, selmon->sel->x, selmon->sel->y,
 		       selmon->sel->w, selmon->sel->h, False);
 	arrange(selmon);
+}
+
+void
+togglemax(const Arg *arg) {
+	Client *c;
+	if(!(c = selmon->sel))
+		return;
+	Monitor *m = c->mon;
+        c->isfloating = !c->isfloating || c->isfixed;
+        if(c->isfloating)
+                resize(c, m->wx, m->wy, m->ww - 2 * c->bw, m->wh - 2 * c->bw, True);
+        arrange(selmon);
 }
 
 void
