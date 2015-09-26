@@ -33,6 +33,7 @@ static const Rule rules[] = {
 	{ "Dwb",            NULL,                  NULL,         1 << 1,       False,       -1,       False },
 	{ "luakit",         NULL,                  NULL,         1 << 1,       False,       -1,       False },
 	{ "Firefox",        NULL,                  NULL,         1 << 1,       False,       -1,       False },
+	{ "Pale moon",        NULL,                  NULL,         1 << 1,       False,       -1,       False },
 	{ "Gimp-2.7",       NULL,                  NULL,         1 << 3,       False,       -1,       False },
 	{ "sublime-text",   NULL,                  NULL,         1 << 4,       False,       -1,       False },
 
@@ -81,7 +82,7 @@ static const Layout layouts[] = {
 /* naive preload approach */
 static const TagPreset tags[] = {
 	{ "1", { 0, 2 } },
-	{ "2", { 3, 0 } },
+	{ "2", { 2, 0 } },
 	{ "3", { 0, 2 } },
 	{ "4", { 1, 1 } },
 	{ "5", { 3, 2 } },
