@@ -15,6 +15,7 @@ static const unsigned int systrayspacing  = 2;      /* systray spacing */
 static const Bool systraypinningfailfirst = True;   /* True: if pinning fails, display systray on the first monitor, False: display systray on the last monitor*/
 static const Bool showsystray             = True;   /* False means no systray */
 static const Bool monobar                 = True;
+static const double shade                 = 0.8;    /* opacity of unfocussed clients */
 // static const char* colors[]         = {
 // 	// border          foreground   background
 // 	normfgcolor,  // normal
@@ -28,41 +29,43 @@ static const Bool monobar                 = True;
 // };
 
 static const Rule rules[] = {
-	/* class            instance               title         tags mask     isfloating   monitor   scratch? */
+	/* class            instance               title         tags mask     isfloating   monitor   scratch?  opacity */
 // to tab
-	{ "Dwb",            NULL,                  NULL,         1 << 1,       False,       -1,       False },
-	{ "luakit",         NULL,                  NULL,         1 << 1,       False,       -1,       False },
-	{ "Firefox",        NULL,                  NULL,         1 << 1,       False,       -1,       False },
-	{ "Pale moon",        NULL,                  NULL,         1 << 1,       False,       -1,       False },
-	{ "Gimp-2.7",       NULL,                  NULL,         1 << 3,       False,       -1,       False },
-	{ "sublime-text",   NULL,                  NULL,         1 << 4,       False,       -1,       False },
+	{ "Dwb",            NULL,                  NULL,         1 << 1,       False,       -1,       False,    -1 },
+	{ "luakit",         NULL,                  NULL,         1 << 1,       False,       -1,       False,    -1 },
+	{ "Firefox",        NULL,                  NULL,         1 << 1,       False,       -1,       False,    -1 },
+	{ "Pale moon",      NULL,                  NULL,         1 << 1,       False,       -1,       False,    -1 },
+	{ "Gimp-2.7",       NULL,                  NULL,         1 << 3,       False,       -1,       False,    -1 },
+	{ "sublime-text",   NULL,                  NULL,         1 << 4,       False,       -1,       False,    -1 },
+	{ "Textadeptjit",   NULL,                  NULL,         1 << 4,       False,       -1,       False,    -1 },
 
 // float
-	{ "MPlayer",        NULL,                  NULL,         0,            True,        -1,       False },
-	{ "vncviewer",      NULL,                  NULL,         0,            True,        -1,       False },
-	{ "sxiv",           NULL,                  NULL,         0,            True,        -1,       False },
-	{ "Zenity",         NULL,                  NULL,         0,            True,        -1,       False },
-	{ "Xdialog",        NULL,                  NULL,         0,            True,        -1,       False },
-//	{ NULL,             NULL,                  "ncmpcpp",    0,            True,        -1,       False },
+	{ "MPlayer",        NULL,                  NULL,         0,            True,        -1,       False,    -1 },
+	{ "mpv",            NULL,                  NULL,         0,            True,        -1,       False,    -1 },
+	{ "vncviewer",      NULL,                  NULL,         0,            True,        -1,       False,    -1 },
+	{ "sxiv",           NULL,                  NULL,         0,            True,        -1,       False,    -1 },
+	{ "Zenity",         NULL,                  NULL,         0,            True,        -1,       False,    -1 },
+	{ "Xdialog",        NULL,                  NULL,         0,            True,        -1,       False,    -1 },
+//	{ NULL,             NULL,                  "ncmpcpp",    0,            True,        -1,       False,    -1 },
 
 // opacity
-	{ "URxvt",          NULL,                  NULL,         0,            False,       -1,       False },
+	{ "URxvt",          NULL,                  NULL,         0,            False,       -1,       False,     0.95 },
 
 // scratchpads
-	{ NULL,             "dwm-scratchpad",      NULL,        ~0,            True,        -1,       1 },
-	{ NULL,             "musicApp",            NULL,        ~0,            True,        -1,       2 },
-	{ NULL,             "mixApp",              NULL,        ~0,            True,        -1,       3 },
+	{ NULL,             "dwm-scratchpad",      NULL,        ~0,            True,        -1,       1,         1 },
+	{ NULL,             "musicApp",            NULL,        ~0,            True,        -1,       2,         1 },
+	{ NULL,             "mixApp",              NULL,        ~0,            True,        -1,       3,         1 },
 
 // dynamic to tab
-	{ NULL,             "DWM-TAG1",            NULL,         1 << 0,       False,       -1,       False },
-	{ NULL,             "DWM-TAG2",            NULL,         1 << 1,       False,       -1,       False },
-	{ NULL,             "DWM-TAG3",            NULL,         1 << 2,       False,       -1,       False },
-	{ NULL,             "DWM-TAG4",            NULL,         1 << 3,       False,       -1,       False },
-	{ NULL,             "DWM-TAG5",            NULL,         1 << 4,       False,       -1,       False },
-	{ NULL,             "DWM-TAG6",            NULL,         1 << 5,       False,       -1,       False },
-	{ NULL,             "DWM-TAG7",            NULL,         1 << 6,       False,       -1,       False },
-	{ NULL,             "DWM-TAG8",            NULL,         1 << 7,       False,       -1,       False },
-	{ NULL,             "DWM-TAG9",            NULL,         1 << 8,       False,       -1,       False },
+	{ NULL,             "DWM-TAG1",            NULL,         1 << 0,       False,       -1,       False,    -1 },
+	{ NULL,             "DWM-TAG2",            NULL,         1 << 1,       False,       -1,       False,    -1 },
+	{ NULL,             "DWM-TAG3",            NULL,         1 << 2,       False,       -1,       False,    -1 },
+	{ NULL,             "DWM-TAG4",            NULL,         1 << 3,       False,       -1,       False,    -1 },
+	{ NULL,             "DWM-TAG5",            NULL,         1 << 4,       False,       -1,       False,    -1 },
+	{ NULL,             "DWM-TAG6",            NULL,         1 << 5,       False,       -1,       False,    -1 },
+	{ NULL,             "DWM-TAG7",            NULL,         1 << 6,       False,       -1,       False,    -1 },
+	{ NULL,             "DWM-TAG8",            NULL,         1 << 7,       False,       -1,       False,    -1 },
+	{ NULL,             "DWM-TAG9",            NULL,         1 << 8,       False,       -1,       False,    -1 },
 };
 
 /* layout(s) */
@@ -169,8 +172,8 @@ static Key keys[] = {
 	{ MODKEY|ControlMask,           XK_0,       tag,            {.ui = ~0 } },
 	/* -- */
 	/* quit */
-	{ MODKEY|ControlMask,           XK_Escape,  quit,           {0} },
-	//{ MODKEY,                       XK_Escape,  quit,           {.i = 23} },
+	{ MODKEY|ControlMask,           XK_Escape,  quit,           {EXIT_SUCCESS} },
+	{ MODKEY,                       XK_Escape,  quit,           {.i = 23} },
 	/* -- */
 	/* monitor */
 	{ MODKEY,                       XK_comma,   focusmon,       {.i = -1 } },

@@ -86,7 +86,7 @@ enum { CurNormal, CurResize, CurMove, CurLast }; /* cursor */
 enum { SchemeNorm, SchemeSel, SchemeLast }; /* color schemes */
 enum { NetSupported, NetSystemTray, NetSystemTrayOP, NetSystemTrayOrientation,
 	   NetWMName, NetWMState, NetWMFullscreen, NetActiveWindow, NetWMWindowType,
-	   NetWMWindowTypeDialog, NetClientList, NetLast }; /* EWMH atoms */
+	   NetWMWindowTypeDialog, NetClientList, NetWMWindowOpacity, NetLast }; /* EWMH atoms */
 enum { Manager, Xembed, XembedInfo, XLast }; /* Xembed atoms */
 enum { WMProtocols, WMDelete, WMState, WMTakeFocus, WMLast }; /* default atoms */
 enum { ClkTagBar, ClkLtSymbol, ClkStatusText, ClkWinTitle,
@@ -117,12 +117,13 @@ struct Client {
 	int basew, baseh, incw, inch, maxw, maxh, minw, minh;
 	int bw, oldbw;
 	unsigned int tags;
-	Bool isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen;
+	Bool isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen, needresize;
 	Client *next;
 	Client *snext;
 	Monitor *mon;
 	Window win;
 	Bool scratch;
+	double opacity;
 };
 
 typedef struct {
@@ -174,6 +175,7 @@ typedef struct {
 	Bool isfloating;
 	int monitor;
 	unsigned int scratch;
+	double opacity;
 } Rule;
 
 struct Clientlist {
@@ -219,6 +221,7 @@ static void drawbar(Monitor *m);
 static void drawbars(void);
 static void enternotify(XEvent *e);
 static void expose(XEvent *e);
+static void window_opacity_set(Client *c, double opacity);
 static void focus(Client *c);
 static void focusin(XEvent *e);
 static void focusmon(const Arg *arg);
@@ -332,6 +335,7 @@ static void (*handler[LASTEvent]) (XEvent *) = {
 };
 static Atom wmatom[WMLast], netatom[NetLast], xatom[XLast];
 static Bool running = True;
+static int exit_state = EXIT_SUCCESS;
 static Cur *cursor[CurLast];
 static ClrScheme scheme[SchemeLast];
 static Display *dpy;
@@ -378,6 +382,7 @@ applyrules(Client *c) {
 		&& (!r->instance || strstr(instance, r->instance)))
 		{
 			c->isfloating = r->isfloating;
+			c->opacity = r->opacity;
 			c->tags |= r->tags;
 			for(m = mons; m && (m->tagset[m->seltags] & c->tags) == 0; m = m->next) ;
 			if(m)
@@ -775,6 +780,8 @@ configurerequest(XEvent *e) {
 				configure(c);
 			if(ISVISIBLE(c, m))
 				XMoveResizeWindow(dpy, c->win, c->x, c->y, c->w, c->h);
+			else
+ 				c->needresize = 1;
 		}
 		else
 			configure(c);
@@ -1011,6 +1018,16 @@ expose(XEvent *e) {
 	}
 }
 
+ void
+window_opacity_set(Client *c, double opacity) {
+	if(opacity >= 0 && opacity <= 1) {
+		unsigned long real_opacity[] = { opacity * 0xffffffff };
+		XChangeProperty(dpy, c->win, netatom[NetWMWindowOpacity], XA_CARDINAL, 32, PropModeReplace, (unsigned char *)real_opacity, 1);
+	}
+	else
+		XDeleteProperty(dpy, c->win, netatom[NetWMWindowOpacity]);
+}
+
 void
 focus(Client *c) {
 	if(!c || !ISVISIBLE(c, selmon))
@@ -1018,6 +1035,11 @@ focus(Client *c) {
 	/* was if(selmon->sel) */
 	if(selmon->sel && selmon->sel != c)
 		unfocus(selmon->sel, False);
+
+	if(selmon->sel && c!=selmon->sel && c && (!root || (selmon->sel->win!=root && c->win!=root)) ) window_opacity_set(selmon->sel, shade);
+	if(c && c!=selmon->sel && (!root || (c->win!=root)) ) window_opacity_set(c, c->opacity);
+
+
 	if(c) {
 		if(c->mon != selmon)
 			selmon = c->mon;
@@ -1035,6 +1057,8 @@ focus(Client *c) {
 	}
 	selmon->sel = c;
 	drawbars();
+
+	if(c) window_opacity_set(c, c->opacity);
 }
 
 void
@@ -1308,6 +1332,7 @@ manage(Window w, XWindowAttributes *wa) {
 		die("fatal: could not malloc() %u bytes\n", sizeof(Client));
 	c->win = w;
 	updatetitle(c);
+	c->opacity=-1;
 	if(XGetTransientForHint(dpy, w, &trans) && (t = wintoclient(trans))) {
 		c->mon = t->mon;
 		c->tags = t->tags;
@@ -1623,6 +1648,7 @@ pushdown(const Arg *arg) {
 void
 quit(const Arg *arg) {
 	running = False;
+	exit_state = arg->i;
 }
 
 Monitor *
@@ -1672,8 +1698,9 @@ resizeclient(Client *c, int x, int y, int w, int h) {
 
 	c->oldx = c->x; c->x = wc.x = x + gap;
 	c->oldy = c->y; c->y = wc.y = y + gap;
+	// NOTE: the gap (border) is doubled for horizontally or vertically windows
 	c->oldw = c->w; c->w = wc.width = w - (gap ? (x + w + (c->bw * 2) == c->mon->wx + c->mon->ww ? 2 : 1) * gap : 0);
-	c->oldh = c->h; c->h = wc.height = h - (gap ? (y + h + (c->bw * 2) == c->mon->wy + c->mon->wh ? 2 : 1) * gap : 0);
+	c->oldh = c->h; c->h = wc.height = h - (gap ? (y + h + (c->bw * 2) == c->mon->wy + c->mon->wh - c->mon->by ? 2 : 1) * gap : 0);
 
 	wc.border_width = LT(c->mon)->arrange == monocle && !c->isfloating ? 0 : c->bw;
 
@@ -1997,6 +2024,7 @@ setup(void) {
 	netatom[NetSystemTrayOP] = XInternAtom(dpy, "_NET_SYSTEM_TRAY_OPCODE", False);
 	netatom[NetSystemTrayOrientation] = XInternAtom(dpy, "_NET_SYSTEM_TRAY_ORIENTATION", False);
 	netatom[NetWMName] = XInternAtom(dpy, "_NET_WM_NAME", False);
+	netatom[NetWMWindowOpacity] = XInternAtom(dpy, "_NET_WM_WINDOW_OPACITY", False);
 	netatom[NetWMState] = XInternAtom(dpy, "_NET_WM_STATE", False);
 	netatom[NetWMFullscreen] = XInternAtom(dpy, "_NET_WM_STATE_FULLSCREEN", False);
 	netatom[NetWMWindowType] = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE", False);
@@ -2055,7 +2083,13 @@ showhide(Client *c) {
 	if(!c)
 		return;
 	if(ISVISIBLE(c, c->mon)) { /* show clients top down */
-		XMoveWindow(dpy, c->win, c->x, c->y);
+		//XMoveWindow(dpy, c->win, c->x, c->y);
+		if(c->needresize) {
+			c->needresize=0;
+			XMoveResizeWindow(dpy, c->win, c->x, c->y, c->w, c->h);
+		} else {
+			XMoveWindow(dpy, c->win, c->x, c->y);
+		}
 		if((!LT(c->mon)->arrange || c->isfloating) && !c->isfullscreen)
 			resize(c, c->x, c->y, c->w, c->h, False);
 		showhide(c->snext);
@@ -2152,12 +2186,12 @@ tile(Monitor *m) {
 		if(i < LT(m)->nmaster) {
 			h = (m->wh - my) / (MIN(n, LT(m)->nmaster) - i);
 			resize(c, m->wx, m->wy + my, mw - (2*c->bw), h - (2*c->bw), False);
-			my += HEIGHT(c);
+			my += HEIGHT(c) - (m->wy + my - c->y);
 		}
 		else {
 			h = (m->wh - ty) / (n - i);
 			resize(c, m->wx + mw, m->wy + ty, m->ww - mw - (2*c->bw), h - (2*c->bw), False);
-			ty += HEIGHT(c);
+			ty += HEIGHT(c) - (m->wy + ty - c->y);
 		}
 }
 
@@ -2913,5 +2947,5 @@ main(int argc, char *argv[]) {
 	run();
 	cleanup();
 	XCloseDisplay(dpy);
-	return EXIT_SUCCESS;
+	return exit_state;
 }
