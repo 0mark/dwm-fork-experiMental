@@ -56,6 +56,8 @@ static const Rule rules[] = {
 	{ NULL,             "musicApp",            NULL,        ~0,            True,        -1,       2,         1 },
 	{ NULL,             "mixApp",              NULL,        ~0,            True,        -1,       3,         1 },
 
+	{ NULL,             "svkb",                NULL,        ~0,            True,        -1,       0,         1 },
+
 // dynamic to tab
 	{ NULL,             "DWM-TAG1",            NULL,         1 << 0,       False,       -1,       False,    -1 },
 	{ NULL,             "DWM-TAG2",            NULL,         1 << 1,       False,       -1,       False,    -1 },
@@ -75,11 +77,13 @@ static const Bool resizehints = True; /* True means respect size hints in tiled 
 #include "layouts/nbstack.c"       /* bottom stack (tiling) */
 
 static const Layout layouts[] = {
-	/* symbol     arrange function   mfact   nmaster   showbar   topbar   addgaps*/
-	{ "[]=",      tile,              0.55,   1,        True,     True,    6 },    /* first entry is default */
-	{ "><>",      NULL,              0.55,   1,        True,     True,    6 },    /* no layout function means floating behavior */
-	{ "[M]",      monocle,           0.55,   1,        True,     True,    0 },
-	{ "[TTT]",    nbstack,           0.7,    1,        True,     True,    6 },
+	/* symbol     arrange function   mfact   nmaster   showbar   topbar   addgaps   attach mode*/
+	{ "[]=",      tile,              0.55,   1,        True,     True,    6,        AttAsFirst },    /* first entry is default */
+	{ "><>",      NULL,              0.55,   1,        True,     True,    6,        AttAsFirst },    /* no layout function means floating behavior */
+	{ "[M]",      monocle,           0.55,   1,        True,     True,    0,        AttAsFirst },
+	{ "[TTT]",    nbstack,           0.6,    1,        True,     True,    6,        AttAsFirst },
+
+	{ "[TTT]",    nbstack,           0.7,   1,        True,     True,    6,        AttAside },    /* first entry is default */
 };
 
 /* naive preload approach */
@@ -88,7 +92,7 @@ static const TagPreset tags[] = {
 	{ "2", { 2, 0 } },
 	{ "3", { 0, 2 } },
 	{ "4", { 1, 1 } },
-	{ "5", { 3, 2 } },
+	{ "5", { 4, 2 } },
 	{ "6", { 0, 2 } },
 	{ "7", { 0, 2 } },
 	{ "8", { 0, 2 } },
