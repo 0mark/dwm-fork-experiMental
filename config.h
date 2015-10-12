@@ -56,8 +56,6 @@ static const Rule rules[] = {
 	{ NULL,             "musicApp",            NULL,        ~0,            True,        -1,       2,         1 },
 	{ NULL,             "mixApp",              NULL,        ~0,            True,        -1,       3,         1 },
 
-	{ NULL,             "svkb",                NULL,        ~0,            True,        -1,       0,         1 },
-
 // dynamic to tab
 	{ NULL,             "DWM-TAG1",            NULL,         1 << 0,       False,       -1,       False,    -1 },
 	{ NULL,             "DWM-TAG2",            NULL,         1 << 1,       False,       -1,       False,    -1 },

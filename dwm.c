@@ -520,8 +520,6 @@ attachabove(Client *c) {
 		at = nx;
 	}
 
-	/*Client *at;*/
-	/*for(at = nexttiled(cl->clients, c->mon); at->next!=c->mon->sel; at = nexttiled(c->next, c->mon));*/
 	c->next = nx;
 	at->next = c;
 }
@@ -533,13 +531,6 @@ attachbelow(Client *c) {
 		return;
 	}
 
-	/*Client *at;*/
-	/*for(at = c->mon->clients; at->next && at->next != c->mon->sel; at = at->next);*/
-	/*for(at = nexttiled(cl->clients, c->mon); at->next && at->next!=c->mon->sel; at = nexttiled(c->next, c->mon));*/
-	/*if(at->next)*/
-		/*at = at->next;*/
-	/*c->next = at->next;*/
-	/*at->next = c;*/
 	c->next = nexttiled(c->mon->sel, c->mon);
 	c->mon->sel->next = c;
 }
@@ -547,13 +538,11 @@ attachbelow(Client *c) {
 void
 attachaside(Client *c) {
 	Client *at = nexttiled(cl->clients, c->mon);
-	if(at)
-		at = nexttiled(at, c->mon);
 	if(!at) {
 		attachasfirst(c);
 		return;
 	}
-	c->next = nexttiled(at->next, c->mon);
+	c->next = at->next;
 	at->next = c;
 }
 
@@ -963,11 +952,9 @@ drawbar(Monitor *m) {
 
 	resizebarwin(m);
 	for(c = cl->clients; c; c = c->next) {
-		if(c->isdock)
-			continue;
 		if(ISVISIBLENORM(c, m))
 			vis++;
-		if(!c->scratch) {
+		if(!c->scratch && !c->isdock) {
 			occ |= c->tags;
 			if(c->isurgent)
 				urg |= c->tags;
