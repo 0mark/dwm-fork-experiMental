@@ -501,7 +501,7 @@ void
 attachaslast(Client *c) {
 	Client *at;
 	for(at = cl->clients; at->next; at = at->next);
-	c->next = at->next;
+	c->next = NULL;
 	at->next = c;
 }
 
