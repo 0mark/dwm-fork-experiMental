@@ -100,6 +100,9 @@ void ft_add_bargraph(Drw *drw, int x, int y, unsigned int h, unsigned int fh, ba
 void ft_add_bitmap(Drw *drw, int x, int y, unsigned int h, unsigned int fh, barItem *item) {
 	Bitmap *bm = item->data[0].b;
 
+	if(!bm)
+		return;
+
 	XSetForeground(drw->dpy, drw->gc, drw->scheme->bg->rgb);
 	XFillRectangle(drw->dpy, drw->drawable, drw->gc, x, y, item->w, h);
 
@@ -112,9 +115,12 @@ void ft_add_bitmap(Drw *drw, int x, int y, unsigned int h, unsigned int fh, barI
 void ft_add_bitmap_bargraph(Drw *drw, int x, int y, unsigned int h, unsigned int fh, barItem *item) {
 	Bitmap *bm = item->data[0].b;
 
+	if(!bm)
+		return;
+
 	XSetForeground(drw->dpy, drw->gc, drw->scheme->bg->rgb);
 	XFillRectangle(drw->dpy, drw->drawable, drw->gc, x, y, item->w, h);
-
+//#define ALIGN(X, Y, W, H, W2, H2)             X + (W / 2) - (W2 / 2), Y + (H / 2) - (H2 / 2), W2, H2  
 	drw_bitmap_bargraph(drw, ALIGN(x, y, item->w, h, bm->w, bm->h), item->k=='g', item->data[1].i, bm);
 }
 
