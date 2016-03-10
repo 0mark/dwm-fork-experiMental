@@ -164,8 +164,8 @@ struct Monitor {
 	int by;               /* bar geometry */
 	int mx, my, mw, mh;   /* screen size */
 	int wx, wy, ww, wh;   /* window area  */
-	unsigned int seltags;
-	unsigned int tagset[2];
+	unsigned int seltags;   /* which tagset in seltags is the current set */
+	unsigned int tagset[2]; /* 2-element-ringbuffer: currently selected tags and last selected tags */
 	Client *sel;
 	Monitor *next;
 	Window barwin;
@@ -304,6 +304,7 @@ static void updatesystrayiconstate(Client *i, XPropertyEvent *ev);
 static void updatewindowtype(Client *c);
 static void updatetitle(Client *c);
 static void updatewmhints(Client *c);
+static void transferclients(Monitor *m);
 static void view(const Arg *arg);
 static Client *wintoclient(Window w);
 static Monitor *wintomon(Window w);
@@ -2069,7 +2070,6 @@ setup(void) {
 	for(i=0; i < LENGTH(tags) + 1; i++) {
 		/* init layouts */
 		j = i < LENGTH(tags) ? i : LENGTH(tags) - 1;
-		printf("%s, %d, %d\n", tags[j].name, tags[j].ltidxs[0], tags[j].ltidxs[0]);
 		XALLOC(cl->pertag->ltidxs[i], Layout **, 2);
 		XALLOC(cl->pertag->ltidxs[i][0], Layout, 1);
 		XALLOC(cl->pertag->ltidxs[i][1], Layout, 1);
@@ -2965,10 +2965,38 @@ wintosystrayicon(Window w) {
 	return i;
 }
 
+void transferclients(Monitor *m) {
+	//Monitor *tm;
+	Client *c;
+
+	if(!m)
+		return;
+
+	//if(c && c->mon) printf("t: %d/%d\n",  m->num, m->tagset[m->seltags]);
+
+	for(c = cl->clients; c; c = c->next) {
+		//if(c && c->mon)
+		//	printf("client: mon %d (has tagset %d) with tagset %d\n", c->mon->num, c->mon->tagset[c->mon->seltags], c->tags);//heere
+
+		if(c && !(c->tags & c->mon->tagset[c->mon->seltags]) /*&& c->mon==selmon*/) {
+			//tm = c->mon==m ? selmon : m;
+			//printf("from %d/%d to %d/%d\n", c->mon->num, c->tags, tm->num, c->tags);
+			unfocus(c, True);
+			detach(c);
+			detachstack(c);
+			//c->mon = tm;
+			c->mon = c->mon==m ? selmon : m;
+			attach(c);
+			attachstack(c);
+			c = cl->clients;
+		}
+	}
+}
+
 void
 view(const Arg *arg) {
 	Monitor *m;
-	int i;
+	int i, tainted = 0;
 	unsigned int tmptag;
 	unsigned int newtagset = selmon->tagset[selmon->seltags ^ 1];
 
@@ -2978,18 +3006,20 @@ view(const Arg *arg) {
 	/* swap tags when trying to display a tag from another monitor */
 	if(arg->ui & TAGMASK)
 		newtagset = arg->ui & TAGMASK;
-	for(m = mons; m; m = m->next)
+
+	for(m = mons; m; m = m->next) {
 		if(m != selmon && newtagset & m->tagset[m->seltags]) {
 			/* prevent displaying all tags (MODKEY-0) when multiple monitors
 			 * are connected */
 			if(newtagset & selmon->tagset[selmon->seltags])
 				return;
-			m->seltags ^= 1;
-			m->tagset[m->seltags] = selmon->tagset[selmon->seltags];
-			attachclients(m);
-			arrange(m);
+			m->seltags ^= 1; // we indirectly choose a different tagset on m, thus the current tagset becomes the old tagset
+			m->tagset[m->seltags] = selmon->tagset[selmon->seltags]; // the current tagset of m becomes the current tagset of selmon
+			m->curtag = selmon->curtag;
+			tainted = 1;
 			break;
 		}
+	}
 
 	selmon->seltags ^= 1; /* toggle sel tagset */
 	if(arg->ui & TAGMASK) {
@@ -3009,8 +3039,16 @@ view(const Arg *arg) {
 
 	if(LT(selmon)->showbar != cl->pertag->ltidxs[selmon->curtag-1][cl->pertag->sellts[selmon->prevtag]]->showbar)
 		togglebar(NULL);
+
+	if(tainted) {
+		transferclients(m);
+		attachclients(m);
+	}
+
 	attachclients(selmon);
 	focus(NULL);
+	if(tainted)
+		arrange(m);
 	arrange(selmon);
 }
 
